@@ -1,0 +1,51 @@
+﻿@page "/calendar"
+@using MudBlazor
+@using BlazorClient.Models
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">Календар сезонних цін</MudText>
+
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-center my-8">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+        </div>
+    }
+    else if (HasError)
+    {
+        <div class="error-state">Помилка завантаження календаря цін</div>
+    }
+    else if (Prices == null || !Prices.Any())
+    {
+        <div class="empty-state">Сезонні ціни ще не додані</div>
+    }
+    else
+    {
+        <MudGrid>
+            @foreach (var price in Prices)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="3">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@price.Title</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudText Typo="Typo.body1">Ціна: <b>@price.Price грн</b></MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                Період: @price.StartDate.ToString("dd.MM.yyyy") - @price.EndDate.ToString("dd.MM.yyyy")
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public bool IsLoading { get; set; } = false;
+    [Parameter] public bool HasError { get; set; } = false;
+    [Parameter] public List<SeasonalPrice>? Prices { get; set; }
+}
