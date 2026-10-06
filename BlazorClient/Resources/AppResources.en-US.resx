@@ -1,126 +1,87 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
-  <!-- 
-    Microsoft ResX Schema 
-    
-    Version 2.0
-    
-    The primary goals of this format is to allow a simple XML format 
-    that is mostly human readable. The generation and parsing of the 
-    various data types are done through the TypeConverter classes 
-    associated with the data types.
-    
-    Example:
-    
-    ... ado.net/XML headers & schema ...
-    <resheader name="resmimetype">text/microsoft-resx</resheader>
-    <resheader name="version">2.0</resheader>
-    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
-    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
-    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
-    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
-    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
-        <value>[base64 mime encoded serialized .NET Framework object]</value>
-    </data>
-    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
-        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
-        <comment>This is a comment</comment>
-    </data>
-                
-    There are any number of "resheader" rows that contain simple 
-    name/value pairs.
-    
-    Each data row contains a name, and value. The row also contains a 
-    type or mimetype. Type corresponds to a .NET class that support 
-    text/value conversion through the TypeConverter architecture. 
-    Classes that don't support this are serialized and stored with the 
-    mimetype set.
-    
-    The mimetype is used for serialized objects, and tells the 
-    ResXResourceReader how to depersist the object. This is currently not 
-    extensible. For a given mimetype the value must be set accordingly:
-    
-    Note - application/x-microsoft.net.object.binary.base64 is the format 
-    that the ResXResourceWriter will generate, however the reader can 
-    read any of the formats listed below.
-    
-    mimetype: application/x-microsoft.net.object.binary.base64
-    value   : The object must be serialized with 
-            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
-            : and then encoded with base64 encoding.
-    
-    mimetype: application/x-microsoft.net.object.soap.base64
-    value   : The object must be serialized with 
-            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
-            : and then encoded with base64 encoding.
+	<resheader name="resmimetype">
+		<value>text/microsoft-resx</value>
+	</resheader>
+	<resheader name="version">
+		<value>2.0</value>
+	</resheader>
+	<resheader name="reader">
+		<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+	</resheader>
+	<resheader name="writer">
+		<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+	</resheader>
 
-    mimetype: application/x-microsoft.net.object.bytearray.base64
-    value   : The object must be serialized into a byte array 
-            : using a System.ComponentModel.TypeConverter
-            : and then encoded with base64 encoding.
-    -->
-  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
-    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
-    <xsd:element name="root" msdata:IsDataSet="true">
-      <xsd:complexType>
-        <xsd:choice maxOccurs="unbounded">
-          <xsd:element name="metadata">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" />
-              </xsd:sequence>
-              <xsd:attribute name="name" use="required" type="xsd:string" />
-              <xsd:attribute name="type" type="xsd:string" />
-              <xsd:attribute name="mimetype" type="xsd:string" />
-              <xsd:attribute ref="xml:space" />
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name="assembly">
-            <xsd:complexType>
-              <xsd:attribute name="alias" type="xsd:string" />
-              <xsd:attribute name="name" type="xsd:string" />
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name="data">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
-                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
-              </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
-              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
-              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
-              <xsd:attribute ref="xml:space" />
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name="resheader">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
-              </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required" />
-            </xsd:complexType>
-          </xsd:element>
-        </xsd:choice>
-      </xsd:complexType>
-    </xsd:element>
-  </xsd:schema>
-  <resheader name="resmimetype">
-    <value>text/microsoft-resx</value>
-  </resheader>
-  <resheader name="version">
-    <value>2.0</value>
-  </resheader>
-  <resheader name="reader">
-    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </resheader>
-  <resheader name="writer">
-    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </resheader>
-  <data name="Price" xml:space="preserve">
-    <value>Price</value>
-  </data>
-  <data name="Welcome" xml:space="preserve">
-    <value>Welcome</value>
-  </data>
+	<data name="SeasonalPrices" xml:space="preserve"><value>Seasonal prices</value></data>
+	<data name="Calendar" xml:space="preserve"><value>Calendar</value></data>
+	<data name="Subscriptions" xml:space="preserve"><value>Subscriptions</value></data>
+	<data name="MySubscriptions" xml:space="preserve"><value>My subscriptions</value></data>
+	<data name="Save" xml:space="preserve"><value>Save</value></data>
+	<data name="Subscribe" xml:space="preserve"><value>Subscribe</value></data>
+	<data name="PriceNotifications" xml:space="preserve"><value>Price notifications</value></data>
+	<data name="NotifyWhenPriceDrops" xml:space="preserve"><value>Notify me when the price drops</value></data>
+	<data name="TelegramOrEmailPlaceholder" xml:space="preserve"><value>Telegram or e-mail</value></data>
+
+	<data name="LoadingPrices" xml:space="preserve"><value>Loading prices...</value></data>
+	<data name="TakesFewSeconds" xml:space="preserve"><value>This will take a few seconds</value></data>
+	<data name="FailedToLoadData" xml:space="preserve"><value>Failed to load data</value></data>
+	<data name="CheckInternetAndTryAgain" xml:space="preserve"><value>Check your internet connection and try again.</value></data>
+	<data name="TryAgain" xml:space="preserve"><value>Try again</value></data>
+	<data name="NothingSelectedYet" xml:space="preserve"><value>Nothing selected yet</value></data>
+	<data name="ChooseProductForBestBuy" xml:space="preserve"><value>Choose a product and we will show you when it is best to buy</value></data>
+
+	<data name="Firewood" xml:space="preserve"><value>Firewood</value></data>
+	<data name="Tires" xml:space="preserve"><value>Tires</value></data>
+	<data name="BuildingMaterials" xml:space="preserve"><value>Building materials</value></data>
+	<data name="Fuel" xml:space="preserve"><value>Fuel</value></data>
+	<data name="FirewoodOakSubtitle" xml:space="preserve"><value>Firewood • Volyn region</value></data>
+	<data name="FirewoodOakTitle" xml:space="preserve"><value>Split firewood, oak</value></data>
+
+	<data name="PriceThroughoutYear" xml:space="preserve"><value>Price throughout the year</value></data>
+	<data name="PriceIndexNote" xml:space="preserve"><value>Inflation-adjusted price index (100 = annual average)</value></data>
+	<data name="VerdictOctober" xml:space="preserve"><value>Verdict for October 2026</value></data>
+	<data name="BuyNow" xml:space="preserve"><value>Buy now</value></data>
+	<data name="PriceWillIncreaseText" xml:space="preserve"><value>The price will increase by approximately 14% until December</value></data>
+	<data name="Wait" xml:space="preserve"><value>Wait</value></data>
+	<data name="Avoid" xml:space="preserve"><value>Avoid</value></data>
+
+	<data name="CategoriesTitle" xml:space="preserve"><value>Categories</value></data>
+	<data name="ErrorLoadingCategories" xml:space="preserve"><value>Error loading categories</value></data>
+	<data name="CategoriesYetEmpty" xml:space="preserve"><value>Categories are not added yet</value></data>
+	<data name="TariffsLabel" xml:space="preserve"><value>Tariffs</value></data>
+
+	<data name="Month_Jan" xml:space="preserve"><value>Jan</value></data>
+	<data name="Month_Feb" xml:space="preserve"><value>Feb</value></data>
+	<data name="Month_Mar" xml:space="preserve"><value>Mar</value></data>
+	<data name="Month_Apr" xml:space="preserve"><value>Apr</value></data>
+	<data name="Month_May" xml:space="preserve"><value>May</value></data>
+	<data name="Month_Jun" xml:space="preserve"><value>Jun</value></data>
+	<data name="Month_Jul" xml:space="preserve"><value>Jul</value></data>
+	<data name="Month_Aug" xml:space="preserve"><value>Aug</value></data>
+	<data name="Month_Sep" xml:space="preserve"><value>Sep</value></data>
+	<data name="Month_Oct" xml:space="preserve"><value>Oct</value></data>
+	<data name="Month_Nov" xml:space="preserve"><value>Nov</value></data>
+	<data name="Month_Dec" xml:space="preserve"><value>Dec</value></data>
+
+	<data name="SubscriptionsTelegramActive" xml:space="preserve"><value>Telegram • {0} active</value></data>
+	<data name="FilterAll" xml:space="preserve"><value>All</value></data>
+	<data name="FilterActive" xml:space="preserve"><value>Active</value></data>
+	<data name="FilterPaused" xml:space="preserve"><value>Paused</value></data>
+	<data name="NotifyWhenIndexBelowThreshold" xml:space="preserve"><value>We'll message you as soon as the price index drops below the threshold</value></data>
+	<data name="ThresholdLine" xml:space="preserve"><value>{0} • threshold: index ≤ {1}</value></data>
+	<data name="RegionVolyn" xml:space="preserve"><value>Volyn region</value></data>
+	<data name="ProductFirewoodOak" xml:space="preserve"><value>Firewood, oak</value></data>
+	<data name="ProductTires" xml:space="preserve"><value>Tires</value></data>
+	<data name="StatusWaiting" xml:space="preserve"><value>Waiting</value></data>
+	<data name="StatusPriceDropped" xml:space="preserve"><value>Price dropped</value></data>
+	<data name="NextNotification" xml:space="preserve"><value>Next notification</value></data>
+	<data name="MonthApril" xml:space="preserve"><value>April</value></data>
+	<data name="NextNotificationText" xml:space="preserve"><value>We expect firewood at its minimum; the price will drop by about {0}%</value></data>
+	<data name="ActiveSubscriptionsLabel" xml:space="preserve"><value>active subscriptions</value></data>
+	<data name="NewNotificationsLabel" xml:space="preserve"><value>new notifications</value></data>
+	<data name="WhereToSendNotifications" xml:space="preserve"><value>Where to send notifications</value></data>
+
+	<data name="LoadingSubscriptions" xml:space="preserve"><value>Loading subscriptions...</value></data>
+	<data name="ErrorLoading" xml:space="preserve"><value>Loading error</value></data>
 </root>

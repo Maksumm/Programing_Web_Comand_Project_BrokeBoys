@@ -1,30 +1,21 @@
-﻿using System.Globalization;
-using Microsoft.JSInterop;
+﻿using Microsoft.JSInterop;
 
 namespace BlazorClient.Services
 {
     public class CultureService
     {
-        private readonly IJSRuntime _jsRuntime;
+        private readonly IJSRuntime _js;
 
-        public CultureService(IJSRuntime jsRuntime)
+        public CultureService(IJSRuntime js)
         {
-            _jsRuntime = jsRuntime;
+            _js = js;
         }
 
-        public async Task SetCultureAsync(string cultureName)
+        public async Task ChangeCultureAsync(string cultureName)
         {
-            var culture = new CultureInfo(cultureName);
-            CultureInfo.DefaultThreadCurrentCulture = culture;
-            CultureInfo.DefaultThreadCurrentUICulture = culture;
-
-            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "blazorCulture", cultureName);
-        }
-
-        public async Task<string> GetCultureAsync()
-        {
-            var cultureName = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "blazorCulture");
-            return string.IsNullOrEmpty(cultureName) ? "uk-UA" : cultureName;
+            await _js.InvokeVoidAsync("localStorage.setItem", "client_culture", cultureName);
+            await _js.InvokeVoidAsync("sessionStorage.setItem", "lang_switch", "1");
+            await _js.InvokeVoidAsync("location.reload");
         }
     }
 }

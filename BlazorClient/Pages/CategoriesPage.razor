@@ -1,9 +1,12 @@
 ﻿@page "/categories"
 @using MudBlazor
 @using BlazorClient.Models
+@using Microsoft.Extensions.Localization
+@using BlazorClient.Resources
+@inject IStringLocalizer<AppResources> L
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-    <MudText Typo="Typo.h4" Class="mb-4">Категорії</MudText>
+    <MudText Typo="Typo.h4" Class="mb-4">@L["CategoriesTitle"]</MudText>
 
     @if (IsLoading)
     {
@@ -13,11 +16,11 @@
     }
     else if (HasError)
     {
-        <div class="error-state">Помилка завантаження категорій</div>
+        <div class="error-state">@L["ErrorLoadingCategories"]</div>
     }
     else if (Categories == null || !Categories.Any())
     {
-        <div class="empty-state">Категорії ще не додані</div>
+        <div class="empty-state">@L["CategoriesYetEmpty"]</div>
     }
     else
     {
@@ -34,7 +37,7 @@
                         <MudCardContent>
                             <MudText Typo="Typo.body2" Class="mb-2">@category.Description</MudText>
                             <MudChip T="string" Color="Color.Info" Size="Size.Small">
-                                Тарифів: @category.SubscriptionsCount
+                                @L["TariffsLabel"]: @category.SubscriptionsCount
                             </MudChip>
                         </MudCardContent>
                     </MudCard>

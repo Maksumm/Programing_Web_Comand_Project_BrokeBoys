@@ -1,51 +1,139 @@
-﻿@page "/calendar"
-@using MudBlazor
+﻿@page "/"
+@page "/calendar"
 @using BlazorClient.Models
+@using MudBlazor
+@using Microsoft.Extensions.Localization
+@using BlazorClient.Resources
+@using System.Globalization
+@inject IStringLocalizer<AppResources> L
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-    <MudText Typo="Typo.h4" Class="mb-4">Календар сезонних цін</MudText>
+@if (IsLoading)
+{
+    <!-- Завантаження -->
+    <MudPaper Class="pa-12 text-center my-8" Style="border-radius: 16px; background-color: white;" Elevation="0">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" Class="mb-4" />
+        <MudText Typo="Typo.h6" Class="fw-bold">@L["LoadingPrices"]</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">@L["TakesFewSeconds"]</MudText>
+    </MudPaper>
+}
+else if (HasError)
+{
+    <!-- Помилка -->
+    <MudPaper Class="pa-12 text-center my-8" Style="border-radius: 16px; background-color: white;" Elevation="0">
+        <MudAvatar Style="background-color: #D1E2D9; color: #1E3A2B; width: 64px; height: 64px;" Class="mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.PriorityHigh" Size="Size.Large" />
+        </MudAvatar>
+        <MudText Typo="Typo.h5" Class="fw-bold mb-2">@L["FailedToLoadData"]</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-6">@L["CheckInternetAndTryAgain"]</MudText>
+        <MudButton Variant="Variant.Filled" Style="background-color: #1E3A2B; color: white; border-radius: 20px; text-transform: none;" Class="px-6">
+            @L["TryAgain"]
+        </MudButton>
+    </MudPaper>
+}
+else if (Prices == null || !Prices.Any())
+{
+    <!-- Порожня сторінка -->
+    <MudPaper Class="pa-12 text-center my-8" Style="border-radius: 16px; background-color: white;" Elevation="0">
+        <MudAvatar Style="background-color: #D1E2D9; color: #1E3A2B; width: 64px; height: 64px;" Class="mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" />
+        </MudAvatar>
+        <MudText Typo="Typo.h5" Class="fw-bold mb-2">@L["NothingSelectedYet"]</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-6">@L["ChooseProductForBestBuy"]</MudText>
 
-    @if (IsLoading)
-    {
-        <div class="d-flex justify-center my-8">
-            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+        <div class="d-flex justify-center gap-2 flex-wrap mt-4">
+            <MudChip T="string" Style="border-radius: 16px;">@L["Firewood"]</MudChip>
+            <MudChip T="string" Style="border-radius: 16px;">@L["Tires"]</MudChip>
+            <MudChip T="string" Style="border-radius: 16px;">@L["BuildingMaterials"]</MudChip>
+            <MudChip T="string" Style="border-radius: 16px;">@L["Fuel"]</MudChip>
         </div>
-    }
-    else if (HasError)
-    {
-        <div class="error-state">Помилка завантаження календаря цін</div>
-    }
-    else if (Prices == null || !Prices.Any())
-    {
-        <div class="empty-state">Сезонні ціни ще не додані</div>
-    }
-    else
-    {
-        <MudGrid>
-            @foreach (var price in Prices)
-            {
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="3">
-                        <MudCardHeader>
-                            <CardHeaderContent>
-                                <MudText Typo="Typo.h6">@price.Title</MudText>
-                            </CardHeaderContent>
-                        </MudCardHeader>
-                        <MudCardContent>
-                            <MudText Typo="Typo.body1">Ціна: <b>@price.Price грн</b></MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                Період: @price.StartDate.ToString("dd.MM.yyyy") - @price.EndDate.ToString("dd.MM.yyyy")
-                            </MudText>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-            }
-        </MudGrid>
-    }
-</MudContainer>
+    </MudPaper>
+}
+else
+{
+    <!-- Сторінка з даними -->
+    <div class="mb-4">
+        <MudText Typo="Typo.caption" Style="color: #666;">@L["FirewoodOakSubtitle"]</MudText>
+        <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #1E3A2B;">@L["FirewoodOakTitle"]</MudText>
+    </div>
+
+    <MudGrid>
+        <!-- Графік / Гістограма -->
+        <MudItem Xs="12" Md="8">
+            <MudPaper Class="pa-6" Style="border-radius: 16px; background: white;" Elevation="0">
+                <MudText Typo="Typo.subtitle1" Class="fw-bold mb-1">@L["PriceThroughoutYear"]</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary mb-6 d-block">@L["PriceIndexNote"]</MudText>
+
+                <div class="d-flex justify-space-between align-end mt-8" style="height: 180px; padding: 0 10px;">
+                    @foreach (var m in _monthlyData)
+                    {
+                        <div class="d-flex flex-column align-center" style="width: 7%;">
+                            <MudText Typo="Typo.caption" Class="mb-1" Style="font-size: 10px;">@m.Value</MudText>
+                            <div style="width: 100%; height: @((m.Value * 1.2).ToString("0.##", CultureInfo.InvariantCulture))px; background-color: @(m.IsCurrent ? "#1E3A2B" : "#C8D6CE"); border-radius: 4px 4px 0 0;"></div>
+                            <MudText Typo="Typo.caption" Class="mt-2" Style="font-size: 11px; color: #666;">@m.Month</MudText>
+                        </div>
+                    }
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Вердикт та Віджет підписки -->
+        <MudItem Xs="12" Md="4">
+            <!-- Зелена картка з вердиктом -->
+            <MudPaper Class="pa-6 mb-4" Style="border-radius: 16px; background-color: #1E3A2B; color: white;" Elevation="0">
+                <MudText Typo="Typo.caption" Style="opacity: 0.8;">@L["VerdictOctober"]</MudText>
+                <MudText Typo="Typo.h5" Class="fw-bold mb-2">@L["BuyNow"]</MudText>
+                <MudText Typo="Typo.body2" Style="opacity: 0.9;" Class="mb-4">@L["PriceWillIncreaseText"]</MudText>
+
+                <div class="d-flex gap-2">
+                    <MudChip T="string" Size="Size.Small" Style="background-color: #2D5A3F; color: white;">@L["BuyNow"]</MudChip>
+                    <MudChip T="string" Size="Size.Small" Style="background-color: rgba(255,255,255,0.15); color: white;">@L["Wait"]</MudChip>
+                    <MudChip T="string" Size="Size.Small" Style="background-color: rgba(255,255,255,0.15); color: white;">@L["Avoid"]</MudChip>
+                </div>
+            </MudPaper>
+
+            <!-- Біла картка форма сповіщення -->
+            <MudPaper Class="pa-6" Style="border-radius: 16px; background-color: white;" Elevation="0">
+                <MudText Typo="Typo.subtitle2" Class="fw-bold mb-1">@L["PriceNotifications"]</MudText>
+                <MudTextField T="string" Placeholder="@L["TelegramOrEmailPlaceholder"]" Variant="Variant.Outlined" Class="mb-3" Margin="Margin.Dense" Style="background-color: #F8F9FA;" />
+                <MudButton Variant="Variant.Filled" Style="background-color: #1E3A2B; color: white; border-radius: 20px; text-transform: none;" FullWidth="true">
+                    @L["Subscribe"]
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
 
 @code {
     [Parameter] public bool IsLoading { get; set; } = false;
     [Parameter] public bool HasError { get; set; } = false;
-    [Parameter] public List<SeasonalPrice>? Prices { get; set; }
+    [Parameter] public List<SeasonalPrice> Prices { get; set; } = new();
+
+    private record MonthValue(string Month, int Value, bool IsCurrent = false);
+
+    private List<MonthValue> _monthlyData => new()
+    {
+        new(L["Month_Jan"], 118),
+        new(L["Month_Feb"], 112),
+        new(L["Month_Mar"], 104),
+        new(L["Month_Apr"], 95),
+        new(L["Month_May"], 88),
+        new(L["Month_Jun"], 84),
+        new(L["Month_Jul"], 80),
+        new(L["Month_Aug"], 86),
+        new(L["Month_Sep"], 94),
+        new(L["Month_Oct"], 108, true),
+        new(L["Month_Nov"], 122),
+        new(L["Month_Dec"], 130)
+    };
+
+    protected override void OnInitialized()
+    {
+        if (Prices == null || !Prices.Any())
+        {
+            Prices = new List<SeasonalPrice>
+            {
+                new SeasonalPrice { Id = 1, Name = "Дрова, дуб", Price = 1500.00m, Month = "Жовтень" }
+            };
+        }
+    }
 }
