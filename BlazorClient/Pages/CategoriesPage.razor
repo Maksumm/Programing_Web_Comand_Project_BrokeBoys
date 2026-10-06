@@ -1,0 +1,51 @@
+﻿@page "/categories"
+@using MudBlazor
+@using BlazorClient.Models
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">Категорії</MudText>
+
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-center my-8">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+        </div>
+    }
+    else if (HasError)
+    {
+        <div class="error-state">Помилка завантаження категорій</div>
+    }
+    else if (Categories == null || !Categories.Any())
+    {
+        <div class="empty-state">Категорії ще не додані</div>
+    }
+    else
+    {
+        <MudGrid>
+            @foreach (var category in Categories)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="3">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@category.Name</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudText Typo="Typo.body2" Class="mb-2">@category.Description</MudText>
+                            <MudChip T="string" Color="Color.Info" Size="Size.Small">
+                                Тарифів: @category.SubscriptionsCount
+                            </MudChip>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public bool IsLoading { get; set; } = false;
+    [Parameter] public bool HasError { get; set; } = false;
+    [Parameter] public List<Category>? Categories { get; set; }
+}
