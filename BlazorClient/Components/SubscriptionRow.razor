@@ -1,0 +1,23 @@
+<div class="d-flex justify-space-between align-center py-2 subscription-row">
+    <div>
+        <MudText Typo="Typo.subtitle2" Class="fw-bold">@Item.Email</MudText>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">@Details</MudText>
+    </div>
+    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                   Size="Size.Small"
+                   AriaLabel="@L["RemoveSubscription"]"
+                   OnClick="Remove" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Subscription Item { get; set; } = default!;
+
+    [Parameter] public EventCallback<int> OnRemove { get; set; }
+
+    // Число в локалізованому рядку форматується за поточною культурою: «3,5» для uk-UA і «3.5» для en-US
+    private string Details => Item.Threshold is { } threshold
+        ? L["ThresholdLine", Item.CategoryName, threshold].Value
+        : Item.CategoryName;
+
+    private Task Remove() => OnRemove.InvokeAsync(Item.Id);
+}

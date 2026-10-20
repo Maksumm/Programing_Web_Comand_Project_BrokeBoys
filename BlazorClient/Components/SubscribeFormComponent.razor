@@ -1,4 +1,4 @@
-﻿@using BlazorClient.Models
+@using BlazorClient.Models
 @using MudBlazor
 
 <EditForm Model="@model" OnValidSubmit="HandleValidSubmit">
@@ -9,12 +9,14 @@
             <MudTextField Label="Електронна пошта"
                           @bind-Value="model.Email"
                           For="@(() => model.Email)"
+                          Immediate="true"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense" />
 
             <MudTextField Label="Категорія"
                           @bind-Value="model.Category"
                           For="@(() => model.Category)"
+                          Immediate="true"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
                           Class="mt-3" />
@@ -28,9 +30,22 @@
 </EditForm>
 
 @code {
-    private SubscribeFormModel model = new();
+    private readonly SubscribeFormModel model = new();
 
-    private void HandleValidSubmit()
+    /// <summary>Викликається після успішної валідації; отримує копію даних форми.</summary>
+    [Parameter] public EventCallback<SubscribeFormModel> OnSubmitted { get; set; }
+
+    private async Task HandleValidSubmit()
     {
+        var snapshot = new SubscribeFormModel
+        {
+            Email = model.Email,
+            Category = model.Category
+        };
+
+        await OnSubmitted.InvokeAsync(snapshot);
+
+        model.Email = string.Empty;
+        model.Category = string.Empty;
     }
 }

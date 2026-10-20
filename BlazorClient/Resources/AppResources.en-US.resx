@@ -84,4 +84,8 @@
 
 	<data name="LoadingSubscriptions" xml:space="preserve"><value>Loading subscriptions...</value></data>
 	<data name="ErrorLoading" xml:space="preserve"><value>Loading error</value></data>
+	<data name="SubscriptionsEmpty" xml:space="preserve"><value>You have no subscriptions yet</value></data>
+	<data name="SubscriptionsEmptyHint" xml:space="preserve"><value>Add your first subscription using the form.</value></data>
+	<data name="SubscriptionsCount" xml:space="preserve"><value>Subscriptions: {0}</value></data>
+	<data name="RemoveSubscription" xml:space="preserve"><value>Remove subscription</value></data>
 </root>

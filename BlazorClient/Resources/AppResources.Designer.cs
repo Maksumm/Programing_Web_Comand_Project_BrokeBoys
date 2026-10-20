@@ -635,5 +635,41 @@ namespace BlazorClient.Resources {
                 return ResourceManager.GetString("WhereToSendNotifications", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to У вас ще немає підписок.
+        /// </summary>
+        public static string SubscriptionsEmpty {
+            get {
+                return ResourceManager.GetString("SubscriptionsEmpty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Додайте першу підписку у формі поруч..
+        /// </summary>
+        public static string SubscriptionsEmptyHint {
+            get {
+                return ResourceManager.GetString("SubscriptionsEmptyHint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Підписок: {0}.
+        /// </summary>
+        public static string SubscriptionsCount {
+            get {
+                return ResourceManager.GetString("SubscriptionsCount", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Видалити підписку.
+        /// </summary>
+        public static string RemoveSubscription {
+            get {
+                return ResourceManager.GetString("RemoveSubscription", resourceCulture);
+            }
+        }
     }
 }
