@@ -3,6 +3,7 @@ using BlazorClient.Resources;
 using BlazorClient.Services;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 
 namespace BlazorClient.Tests;
 
@@ -99,6 +100,25 @@ public class SubscriptionsPageTests
             Assert.Empty(state.Items);
             Assert.Empty(cut.FindAll(".subscription-row"));
             Assert.NotEmpty(cut.FindAll(".empty-state"));
+        });
+    }
+
+    [Fact]
+    public async Task SubmittingForm_AddsRowToList()
+    {
+        await using var ctx = TestHelpers.CreateContext();
+        var cut = ctx.Render<SubscriptionsPage>();
+        var fields = cut.FindComponents<MudTextField<string>>();
+        await fields[0].Find("input").InputAsync("x@y.com");
+        await fields[1].Find("input").InputAsync("Дрова");
+
+        await cut.Find("form").SubmitAsync();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(cut.FindAll(".subscription-row"));
+            Assert.Contains("x@y.com", cut.Markup);
+            Assert.Empty(cut.FindAll(".empty-state"));
         });
     }
 }
