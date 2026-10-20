@@ -88,4 +88,9 @@
 	<data name="SubscriptionsEmptyHint" xml:space="preserve"><value>Додайте першу підписку у формі поруч.</value></data>
 	<data name="SubscriptionsCount" xml:space="preserve"><value>Підписок: {0}</value></data>
 	<data name="RemoveSubscription" xml:space="preserve"><value>Видалити підписку</value></data>
+	<data name="EmailLabel" xml:space="preserve"><value>Електронна пошта</value></data>
+	<data name="CategoryLabel" xml:space="preserve"><value>Категорія</value></data>
+	<data name="EmailRequired" xml:space="preserve"><value>Вкажіть електронну пошту</value></data>
+	<data name="EmailInvalid" xml:space="preserve"><value>Некоректна адреса електронної пошти</value></data>
+	<data name="CategoryRequired" xml:space="preserve"><value>Вкажіть категорію</value></data>
 </root>

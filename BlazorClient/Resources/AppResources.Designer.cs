@@ -671,5 +671,50 @@ namespace BlazorClient.Resources {
                 return ResourceManager.GetString("RemoveSubscription", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Електронна пошта.
+        /// </summary>
+        public static string EmailLabel {
+            get {
+                return ResourceManager.GetString("EmailLabel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Категорія.
+        /// </summary>
+        public static string CategoryLabel {
+            get {
+                return ResourceManager.GetString("CategoryLabel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Вкажіть електронну пошту.
+        /// </summary>
+        public static string EmailRequired {
+            get {
+                return ResourceManager.GetString("EmailRequired", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Некоректна адреса електронної пошти.
+        /// </summary>
+        public static string EmailInvalid {
+            get {
+                return ResourceManager.GetString("EmailInvalid", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Вкажіть категорію.
+        /// </summary>
+        public static string CategoryRequired {
+            get {
+                return ResourceManager.GetString("CategoryRequired", resourceCulture);
+            }
+        }
     }
 }

@@ -1,19 +1,18 @@
-@using BlazorClient.Models
-@using MudBlazor
-
 <EditForm Model="@model" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
 
     <MudCard Class="pa-4">
         <MudCardContent>
-            <MudTextField Label="Електронна пошта"
+            <MudTextField T="string"
+                          Label="@L["EmailLabel"]"
                           @bind-Value="model.Email"
                           For="@(() => model.Email)"
                           Immediate="true"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense" />
 
-            <MudTextField Label="Категорія"
+            <MudTextField T="string"
+                          Label="@L["CategoryLabel"]"
                           @bind-Value="model.Category"
                           For="@(() => model.Category)"
                           Immediate="true"
@@ -23,7 +22,7 @@
         </MudCardContent>
         <MudCardActions>
             <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary">
-                Підписатися
+                @L["Subscribe"]
             </MudButton>
         </MudCardActions>
     </MudCard>

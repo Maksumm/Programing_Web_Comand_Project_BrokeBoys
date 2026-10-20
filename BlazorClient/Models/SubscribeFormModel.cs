@@ -1,20 +1,19 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
+using BlazorClient.Resources;
 
 namespace BlazorClient.Models
 {
+    /// <summary>
+    /// Модель форми підписки. Повідомлення валідації беруться з .resx (AppResources),
+    /// тому відображаються мовою, яку обрав користувач.
+    /// </summary>
     public class SubscribeFormModel
     {
-        [Required(ErrorMessage = "Поле обов'язкове для заповнення")]
+        [Required(ErrorMessageResourceType = typeof(AppResources), ErrorMessageResourceName = nameof(AppResources.EmailRequired))]
+        [EmailAddress(ErrorMessageResourceType = typeof(AppResources), ErrorMessageResourceName = nameof(AppResources.EmailInvalid))]
         public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Оберіть категорію")]
+        [Required(ErrorMessageResourceType = typeof(AppResources), ErrorMessageResourceName = nameof(AppResources.CategoryRequired))]
         public string Category { get; set; } = string.Empty;
-
-        // Додаємо також SelectedCategory для сумісності з іншими викликами
-        public string SelectedCategory
-        {
-            get => Category;
-            set => Category = value;
-        }
     }
 }
