@@ -93,7 +93,7 @@
     };
 
     [Inject] private Microsoft.JSInterop.IJSRuntime JSRuntime { get; set; } = default!;
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private CultureService CultureService { get; set; } = default!;
 
     private string CurrentCulture = "uk-UA";
 
@@ -120,10 +120,9 @@
         CurrentCulture = culture;
         try
         {
-            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "client_culture", culture);
+            // зберігає вибір у localStorage і перезавантажує застосунок з новою культурою
+            await CultureService.ChangeCultureAsync(culture);
         }
         catch { }
-
-        Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
     }
 }

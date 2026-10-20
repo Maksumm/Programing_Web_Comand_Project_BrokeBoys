@@ -734,5 +734,14 @@ namespace BlazorClient.Resources {
                 return ResourceManager.GetString("ThresholdRange", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Сторінку не знайдено.
+        /// </summary>
+        public static string NotFound {
+            get {
+                return ResourceManager.GetString("NotFound", resourceCulture);
+            }
+        }
     }
 }

@@ -95,4 +95,5 @@
 	<data name="CategoryRequired" xml:space="preserve"><value>Enter a category</value></data>
 	<data name="ThresholdLabel" xml:space="preserve"><value>Threshold</value></data>
 	<data name="ThresholdRange" xml:space="preserve"><value>Enter a number between 0.01 and 1000</value></data>
+	<data name="NotFound" xml:space="preserve"><value>Page not found</value></data>
 </root>
