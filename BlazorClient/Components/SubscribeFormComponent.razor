@@ -1,3 +1,4 @@
+@using System.Globalization
 <EditForm Model="@model" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
 
@@ -19,6 +20,17 @@
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
                           Class="mt-3" />
+
+            <MudNumericField T="decimal?"
+                             Label="@L["ThresholdLabel"]"
+                             @bind-Value="model.Threshold"
+                             For="@(() => model.Threshold)"
+                             Culture="@CultureInfo.CurrentCulture"
+                             Immediate="true"
+                             HideSpinButtons="true"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense"
+                             Class="mt-3" />
         </MudCardContent>
         <MudCardActions>
             <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary">
@@ -39,12 +51,14 @@
         var snapshot = new SubscribeFormModel
         {
             Email = model.Email,
-            Category = model.Category
+            Category = model.Category,
+            Threshold = model.Threshold
         };
 
         await OnSubmitted.InvokeAsync(snapshot);
 
         model.Email = string.Empty;
         model.Category = string.Empty;
+        model.Threshold = null;
     }
 }

@@ -93,4 +93,6 @@
 	<data name="EmailRequired" xml:space="preserve"><value>Вкажіть електронну пошту</value></data>
 	<data name="EmailInvalid" xml:space="preserve"><value>Некоректна адреса електронної пошти</value></data>
 	<data name="CategoryRequired" xml:space="preserve"><value>Вкажіть категорію</value></data>
+	<data name="ThresholdLabel" xml:space="preserve"><value>Поріг</value></data>
+	<data name="ThresholdRange" xml:space="preserve"><value>Вкажіть число від 0,01 до 1000</value></data>
 </root>

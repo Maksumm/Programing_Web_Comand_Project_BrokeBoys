@@ -15,5 +15,9 @@ namespace BlazorClient.Models
 
         [Required(ErrorMessageResourceType = typeof(AppResources), ErrorMessageResourceName = nameof(AppResources.CategoryRequired))]
         public string Category { get; set; } = string.Empty;
+
+        /// <summary>Необов'язковий поріг (дробове число). Роздільник залежить від культури: «3,5» для uk-UA, «3.5» для en-US.</summary>
+        [Range(0.01, 1000, ErrorMessageResourceType = typeof(AppResources), ErrorMessageResourceName = nameof(AppResources.ThresholdRange))]
+        public decimal? Threshold { get; set; }
     }
 }

@@ -716,5 +716,23 @@ namespace BlazorClient.Resources {
                 return ResourceManager.GetString("CategoryRequired", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Поріг.
+        /// </summary>
+        public static string ThresholdLabel {
+            get {
+                return ResourceManager.GetString("ThresholdLabel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Вкажіть число від 0,01 до 1000.
+        /// </summary>
+        public static string ThresholdRange {
+            get {
+                return ResourceManager.GetString("ThresholdRange", resourceCulture);
+            }
+        }
     }
 }

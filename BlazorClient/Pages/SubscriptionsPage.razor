@@ -79,7 +79,7 @@ else
 
     private void Remove(int id) => State.Remove(id);
 
-    private void OnSubscribed(SubscribeFormModel m) => State.Add(m.Email, m.Category);
+    private void OnSubscribed(SubscribeFormModel m) => State.Add(m.Email, m.Category, m.Threshold);
 
     public void Dispose() => State.Changed -= HandleStateChanged;
 }
