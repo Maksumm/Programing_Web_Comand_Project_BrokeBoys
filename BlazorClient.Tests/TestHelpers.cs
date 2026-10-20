@@ -27,14 +27,3 @@ public static class TestHelpers
         return ctx;
     }
 }
-
-// Залишено для ще не переписаних тестів сторінок (буде прибрано в гілці fix/real-tests)
-public class DummyHttpMessageHandler : HttpMessageHandler
-{
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        => Task.FromResult(new HttpResponseMessage
-        {
-            StatusCode = System.Net.HttpStatusCode.OK,
-            Content = new StringContent("[]")
-        });
-}
