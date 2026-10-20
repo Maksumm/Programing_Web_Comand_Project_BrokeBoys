@@ -1,0 +1,36 @@
+﻿@using BlazorClient.Models
+@using MudBlazor
+
+<EditForm Model="@model" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    <MudCard Class="pa-4">
+        <MudCardContent>
+            <MudTextField Label="Електронна пошта"
+                          @bind-Value="model.Email"
+                          For="@(() => model.Email)"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
+
+            <MudTextField Label="Категорія"
+                          @bind-Value="model.Category"
+                          For="@(() => model.Category)"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mt-3" />
+        </MudCardContent>
+        <MudCardActions>
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary">
+                Підписатися
+            </MudButton>
+        </MudCardActions>
+    </MudCard>
+</EditForm>
+
+@code {
+    private SubscribeFormModel model = new();
+
+    private void HandleValidSubmit()
+    {
+    }
+}

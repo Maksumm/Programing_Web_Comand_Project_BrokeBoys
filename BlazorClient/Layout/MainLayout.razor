@@ -1,16 +1,129 @@
 ﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+@using System.Globalization
+@using Microsoft.Extensions.Localization
+@using BlazorClient.Resources
+@inject IStringLocalizer<AppResources> L
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+<MudThemeProvider Theme="_customTheme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout Style="background-color: #EAECE9; min-height: 100vh;">
+    <!-- Фіксована верхня панель -->
+    <MudAppBar Elevation="0" Fixed="true" Style="background-color: #1E3A2B; color: #FFFFFF; padding: 0 32px; height: 64px;">
+        <div class="d-flex align-center gap-2 mr-8">
+            <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #FFFFFF;"></div>
+            <MudText Typo="Typo.h6" Class="fw-bold" Style="font-size: 18px; color: white;">@L["SeasonalPrices"]</MudText>
         </div>
 
-        <article class="content px-4">
+        <!-- Посилання навігації -->
+        <div class="d-flex gap-6 align-center">
+            <NavLink href="calendar" class="nav-link-custom">@L["Calendar"]</NavLink>
+            <NavLink href="categories" class="nav-link-custom">@L["CategoriesTitle"]</NavLink>
+            <NavLink href="subscriptions" class="nav-link-custom">@L["Subscriptions"]</NavLink>
+        </div>
+
+        <MudSpacer />
+
+        <!-- Блок: Перемикач мов та кнопка Підписатися -->
+        <div class="d-flex align-center gap-3">
+            <div class="d-flex gap-1" style="background-color: rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 2px;">
+                <MudButton Variant="@(CurrentCulture == "uk-UA" ? Variant.Filled : Variant.Text)"
+                           Size="Size.Small"
+                           Style="@(CurrentCulture == "uk-UA" ? "background-color: #E2E8F0; color: #1E3A2B; border-radius: 18px; font-weight: 600; min-width: 45px;" : "color: white; min-width: 45px;")"
+                           OnClick="@(() => ChangeLanguage("uk-UA"))">
+                    UA
+                </MudButton>
+                <MudButton Variant="@(CurrentCulture == "en-US" ? Variant.Filled : Variant.Text)"
+                           Size="Size.Small"
+                           Style="@(CurrentCulture == "en-US" ? "background-color: #E2E8F0; color: #1E3A2B; border-radius: 18px; font-weight: 600; min-width: 45px;" : "color: white; min-width: 45px;")"
+                           OnClick="@(() => ChangeLanguage("en-US"))">
+                    EN
+                </MudButton>
+            </div>
+
+            <MudButton Variant="Variant.Filled"
+                       Style="background-color: #E2E8F0; color: #1E3A2B; font-weight: 600; text-transform: none; border-radius: 20px;"
+                       Size="Size.Small"
+                       Href="/subscriptions">
+                @L["Subscribe"]
+            </MudButton>
+        </div>
+    </MudAppBar>
+
+    <MudMainContent Class="pt-16 px-6 pb-6" Style="max-width: 1200px; margin: 0 auto;">
+        <div class="mt-4">
             @Body
-        </article>
-    </main>
-</div>
+        </div>
+    </MudMainContent>
+</MudLayout>
+
+<style>
+    .nav-link-custom {
+        color: rgba(255, 255, 255, 0.75);
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 15px;
+        transition: color 0.2s ease;
+    }
+
+        .nav-link-custom:hover, .nav-link-custom.active {
+            color: #FFFFFF !important;
+            font-weight: 600;
+        }
+</style>
+
+@code {
+
+    private string[] MonthKeys = { "Month_Jan","Month_Feb","Month_Mar","Month_Apr","Month_May","Month_Jun",
+                                  "Month_Jul","Month_Aug","Month_Sep","Month_Oct","Month_Nov","Month_Dec" };
+
+    private MudTheme _customTheme = new MudTheme()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#1E3A2B",
+            Background = "#EAECE9",
+            Surface = "#FFFFFF",
+            AppbarBackground = "#1E3A2B",
+            TextPrimary = "#1C1C1C",
+            TextSecondary = "#666666"
+        }
+    };
+
+    [Inject] private Microsoft.JSInterop.IJSRuntime JSRuntime { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private string CurrentCulture = "uk-UA";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var storedCulture = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "client_culture");
+            if (!string.IsNullOrEmpty(storedCulture))
+            {
+                CurrentCulture = storedCulture;
+                var culture = new CultureInfo(storedCulture);
+                CultureInfo.DefaultThreadCurrentCulture = culture;
+                CultureInfo.DefaultThreadCurrentUICulture = culture;
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task ChangeLanguage(string culture)
+    {
+        CurrentCulture = culture;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "client_culture", culture);
+        }
+        catch { }
+
+        Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+    }
+}

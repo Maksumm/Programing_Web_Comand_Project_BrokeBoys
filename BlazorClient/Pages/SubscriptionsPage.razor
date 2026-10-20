@@ -1,0 +1,135 @@
+﻿@page "/subscriptions"
+@using BlazorClient.Models
+@using MudBlazor
+@using Microsoft.Extensions.Localization
+@using BlazorClient.Resources
+@inject IStringLocalizer<AppResources> L
+
+@if (IsLoading)
+{
+    <MudPaper Class="pa-12 text-center my-4" Style="border-radius: 16px; background-color: white;" Elevation="0">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" Class="mb-4" />
+        <MudText Typo="Typo.h6" Class="fw-bold">@L["LoadingSubscriptions"]</MudText>
+    </MudPaper>
+}
+else if (HasError)
+{
+    <MudPaper Class="pa-12 text-center my-4" Style="border-radius: 16px; background-color: white;" Elevation="0">
+        <MudAvatar Style="background-color: #D1E2D9; color: #1E3A2B; width: 64px; height: 64px;" Class="mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.PriorityHigh" Size="Size.Large" />
+        </MudAvatar>
+        <MudText Typo="Typo.h5" Class="fw-bold mb-2">@L["ErrorLoading"]</MudText>
+        <MudButton Variant="Variant.Filled" Style="background-color: #1E3A2B; color: white; border-radius: 20px;" Class="mt-4">
+            @L["TryAgain"]
+        </MudButton>
+    </MudPaper>
+}
+else
+{
+    <div class="mb-6 d-flex justify-space-between align-center">
+        <div>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">@L["SubscriptionsTelegramActive", 5]</MudText>
+            <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #1E3A2B;">@L["MySubscriptions"]</MudText>
+        </div>
+        <div class="d-flex gap-2">
+            <MudChip T="string" Style="background-color: #1E3A2B; color: white;">@L["FilterAll"]</MudChip>
+            <MudChip T="string" Style="background-color: #E2E8F0;">@L["FilterActive"]</MudChip>
+            <MudChip T="string" Style="background-color: #E2E8F0;">@L["FilterPaused"]</MudChip>
+        </div>
+    </div>
+
+    <MudGrid>
+        <MudItem Xs="12" Md="8">
+            <MudPaper Class="pa-6" Style="border-radius: 16px; background-color: white;" Elevation="0">
+                <MudText Typo="Typo.subtitle1" Class="fw-bold mb-1">@L["PriceNotifications"]</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary mb-4 d-block">@L["NotifyWhenIndexBelowThreshold"]</MudText>
+
+                <MudList T="string" Clickable="false">
+                    <MudListItem T="string" Class="py-3 px-0">
+                        <div class="d-flex justify-space-between align-center w-100">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Class="fw-bold">@L["ProductFirewoodOak"]</MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@L["ThresholdLine", L["RegionVolyn"].Value, 90]</MudText>
+                            </div>
+                            <div class="d-flex align-center gap-2">
+                                <MudChip T="string" Size="Size.Small" Style="background-color: #E2E8F0;">@L["StatusWaiting"]</MudChip>
+                                <MudSwitch T="bool" Value="true" Color="Color.Success" />
+                            </div>
+                        </div>
+                    </MudListItem>
+                    <MudDivider />
+
+                    <MudListItem T="string" Class="py-3 px-0">
+                        <div class="d-flex justify-space-between align-center w-100">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Class="fw-bold">@L["ProductTires"]</MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@L["ThresholdLine", L["RegionVolyn"].Value, 85]</MudText>
+                            </div>
+                            <div class="d-flex align-center gap-2">
+                                <MudChip T="string" Size="Size.Small" Style="background-color: #1E3A2B; color: white;">@L["StatusPriceDropped"]</MudChip>
+                                <MudSwitch T="bool" Value="true" Color="Color.Success" />
+                            </div>
+                        </div>
+                    </MudListItem>
+                </MudList>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem Xs="12" Md="4">
+            <MudPaper Class="pa-6 mb-4" Style="border-radius: 16px; background-color: #1E3A2B; color: white;" Elevation="0">
+                <MudText Typo="Typo.caption" Style="opacity: 0.8;">@L["NextNotification"]</MudText>
+                <MudText Typo="Typo.h5" Class="fw-bold mb-2">@L["MonthApril"]</MudText>
+                <MudText Typo="Typo.body2" Style="opacity: 0.9;" Class="mb-4">@L["NextNotificationText", 18]</MudText>
+
+                <MudDivider Style="background-color: rgba(255,255,255,0.2);" Class="my-3" />
+
+                <div class="d-flex justify-space-between">
+                    <div>
+                        <MudText Typo="Typo.h6" Class="fw-bold">5</MudText>
+                        <MudText Typo="Typo.caption" Style="opacity: 0.8;">@L["ActiveSubscriptionsLabel"]</MudText>
+                    </div>
+                    <div>
+                        <MudText Typo="Typo.h6" Class="fw-bold">2</MudText>
+                        <MudText Typo="Typo.caption" Style="opacity: 0.8;">@L["NewNotificationsLabel"]</MudText>
+                    </div>
+                </div>
+            </MudPaper>
+
+            <MudPaper Class="pa-6" Style="border-radius: 16px; background-color: white;" Elevation="0">
+                <MudText Typo="Typo.subtitle2" Class="fw-bold mb-2">@L["WhereToSendNotifications"]</MudText>
+
+                <EditForm Model="@FormModel" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+
+                    <MudTextField T="string"
+                                  @bind-Value="FormModel.Email"
+                                  For="@(() => FormModel.Email)"
+                                  Placeholder="@L["TelegramOrEmailPlaceholder"]"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-3"
+                                  Margin="Margin.Dense"
+                                  Style="background-color: #F8F9FA;" />
+
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Filled"
+                               Style="background-color: #1E3A2B; color: white; border-radius: 20px; text-transform: none;"
+                               FullWidth="true">
+                        @L["Save"]
+                    </MudButton>
+                </EditForm>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public bool IsLoading { get; set; } = false;
+    [Parameter] public bool HasError { get; set; } = false;
+    [Parameter] public List<Subscription> Subscriptions { get; set; } = new();
+
+    public SubscribeFormModel FormModel { get; set; } = new();
+
+    private void HandleValidSubmit()
+    {
+    }
+}
