@@ -1,29 +1,67 @@
 using System.Globalization;
-using Bunit;
+using System.Net;
+using BlazorClient.Resources;
 using BlazorClient.Services;
+using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using MudBlazor.Services;
+using Xunit;
 
-namespace BlazorClient.Tests;
+// Тести змінюють CultureInfo (глобальний стан), тому паралельний запуск вимкнено.
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
 
-public static class TestHelpers
+namespace BlazorClient.Tests
 {
-    /// <summary>
-    /// Контекст bUnit з MudBlazor, локалізацією та сервісами застосунку.
-    /// Культура встановлюється для поточного тесту (async-local), тож тести не заважають один одному.
-    /// </summary>
-    public static BunitContext CreateContext(string culture = "uk-UA")
+    internal static class TestHelpers
     {
-        var ci = new CultureInfo(culture);
-        CultureInfo.CurrentCulture = ci;
-        CultureInfo.CurrentUICulture = ci;
+        public static BunitContext CreateContext()
+        {
+            var ctx = new BunitContext();
+            ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+            ctx.Services.AddMudServices();
+            ctx.Services.AddLocalization();
+            return ctx;
+        }
 
-        var ctx = new BunitContext();
-        ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-        ctx.Services.AddMudServices();
-        ctx.Services.AddLocalization();
-        ctx.Services.AddScoped<SubscriptionState>();
-        ctx.Services.AddScoped<CultureService>();
-        return ctx;
+        /// <summary>Реєструє стан екрана як singleton, щоб тест міг змінювати його до і після рендеру.</summary>
+        public static ListState<T> AddState<T>(this BunitContext ctx)
+        {
+            var state = new ListState<T>();
+            ctx.Services.AddSingleton(state);
+            return state;
+        }
+
+        public static IStringLocalizer<AppResources> Localizer(this BunitContext ctx) =>
+            ctx.Services.GetRequiredService<IStringLocalizer<AppResources>>();
+
+        /// <summary>Розмітка з декодованими HTML-сутностями (апострофи, лапки).</summary>
+        public static string Text(string markup) => WebUtility.HtmlDecode(markup);
+    }
+
+    /// <summary>Тимчасово змінює культуру і повертає попередню після завершення тесту.</summary>
+    internal sealed class CultureScope : IDisposable
+    {
+        private readonly CultureInfo _culture = CultureInfo.CurrentCulture;
+        private readonly CultureInfo _uiCulture = CultureInfo.CurrentUICulture;
+        private readonly CultureInfo? _defaultCulture = CultureInfo.DefaultThreadCurrentCulture;
+        private readonly CultureInfo? _defaultUiCulture = CultureInfo.DefaultThreadCurrentUICulture;
+
+        public CultureScope(string name)
+        {
+            var culture = new CultureInfo(name);
+            CultureInfo.CurrentCulture = culture;
+            CultureInfo.CurrentUICulture = culture;
+            CultureInfo.DefaultThreadCurrentCulture = culture;
+            CultureInfo.DefaultThreadCurrentUICulture = culture;
+        }
+
+        public void Dispose()
+        {
+            CultureInfo.CurrentCulture = _culture;
+            CultureInfo.CurrentUICulture = _uiCulture;
+            CultureInfo.DefaultThreadCurrentCulture = _defaultCulture;
+            CultureInfo.DefaultThreadCurrentUICulture = _defaultUiCulture;
+        }
     }
 }

@@ -1,8 +1,8 @@
-﻿@inherits LayoutComponentBase
-@using System.Globalization
+@inherits LayoutComponentBase
+@using BlazorClient.Services
 @using Microsoft.Extensions.Localization
 @using BlazorClient.Resources
-@inject IStringLocalizer<AppResources> L
+@inject CultureService Culture
 
 <MudThemeProvider Theme="_customTheme" />
 <MudPopoverProvider />
@@ -76,9 +76,6 @@
 
 @code {
 
-    private string[] MonthKeys = { "Month_Jan","Month_Feb","Month_Mar","Month_Apr","Month_May","Month_Jun",
-                                  "Month_Jul","Month_Aug","Month_Sep","Month_Oct","Month_Nov","Month_Dec" };
-
     private MudTheme _customTheme = new MudTheme()
     {
         PaletteLight = new PaletteLight()
@@ -92,38 +89,8 @@
         }
     };
 
-    [Inject] private Microsoft.JSInterop.IJSRuntime JSRuntime { get; set; } = default!;
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    // Культуру застосовує Program.cs (CultureService.InitializeAsync) із localStorage.
+    private string CurrentCulture => Culture.CurrentCulture;
 
-    private string CurrentCulture = "uk-UA";
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            var storedCulture = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "client_culture");
-            if (!string.IsNullOrEmpty(storedCulture))
-            {
-                CurrentCulture = storedCulture;
-                var culture = new CultureInfo(storedCulture);
-                CultureInfo.DefaultThreadCurrentCulture = culture;
-                CultureInfo.DefaultThreadCurrentUICulture = culture;
-            }
-        }
-        catch
-        {
-        }
-    }
-
-    private async Task ChangeLanguage(string culture)
-    {
-        CurrentCulture = culture;
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "client_culture", culture);
-        }
-        catch { }
-
-        Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
-    }
+    private Task ChangeLanguage(string culture) => Culture.ChangeCultureAsync(culture);
 }

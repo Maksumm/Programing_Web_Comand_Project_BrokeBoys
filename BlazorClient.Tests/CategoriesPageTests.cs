@@ -1,74 +1,120 @@
 using BlazorClient.Models;
 using BlazorClient.Pages;
-using BlazorClient.Resources;
 using Bunit;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
-namespace BlazorClient.Tests;
-
-public class CategoriesPageTests
+namespace BlazorClient.Tests
 {
-    [Fact]
-    public async Task Loading_ShowsSpinner_AndNoCards()
+    public class CategoriesPageTests
     {
-        await using var ctx = TestHelpers.CreateContext();
+        private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(3);
 
-        var cut = ctx.Render<CategoriesPage>(p => p.Add(c => c.IsLoading, true));
-
-        Assert.NotEmpty(cut.FindAll(".mud-progress-circular"));
-        Assert.Empty(cut.FindAll(".mud-card"));
-        Assert.Empty(cut.FindAll(".error-state"));
-    }
-
-    [Fact]
-    public async Task Error_ShowsErrorMessage()
-    {
-        await using var ctx = TestHelpers.CreateContext();
-
-        var cut = ctx.Render<CategoriesPage>(p => p.Add(c => c.HasError, true));
-
-        Assert.Contains(AppResources.ErrorLoadingCategories, cut.Find(".error-state").TextContent);
-        Assert.Empty(cut.FindAll(".mud-card"));
-    }
-
-    [Fact]
-    public async Task Empty_ShowsEmptyMessage()
-    {
-        await using var ctx = TestHelpers.CreateContext();
-
-        var cut = ctx.Render<CategoriesPage>(p => p.Add(c => c.Categories, new List<Category>()));
-
-        Assert.Contains(AppResources.CategoriesYetEmpty, cut.Find(".empty-state").TextContent);
-        Assert.Empty(cut.FindAll(".mud-card"));
-    }
-
-    [Fact]
-    public async Task NullCategories_AreTreatedAsEmpty()
-    {
-        await using var ctx = TestHelpers.CreateContext();
-
-        var cut = ctx.Render<CategoriesPage>();
-
-        Assert.NotEmpty(cut.FindAll(".empty-state"));
-    }
-
-    [Fact]
-    public async Task Data_RendersCardPerCategory_WithNameAndCount()
-    {
-        await using var ctx = TestHelpers.CreateContext();
-        var items = new List<Category>
+        private static List<Category> Sample() => new()
         {
-            new() { Id = 1, Name = "Овочі", Description = "Сезонні овочі", SubscriptionsCount = 3 },
-            new() { Id = 2, Name = "Фрукти", Description = "Сезонні фрукти", SubscriptionsCount = 5 }
+            new Category { Id = 1, Name = "Овочі", Description = "Свіжі овочі", SubscriptionsCount = 3 },
+            new Category { Id = 2, Name = "Фрукти", Description = "Сезонні фрукти", SubscriptionsCount = 5 }
         };
 
-        var cut = ctx.Render<CategoriesPage>(p => p.Add(c => c.Categories, items));
+        [Fact]
+        public async Task LoadingState_ShowsSpinnerOnly()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.AddState<Category>().SetLoading();
 
-        var cards = cut.FindAll(".mud-card");
-        Assert.Equal(2, cards.Count);
-        Assert.Contains("Овочі", cards[0].TextContent);
-        Assert.Contains("3", cards[0].TextContent);
-        Assert.Contains("Фрукти", cards[1].TextContent);
-        Assert.Contains("5", cards[1].TextContent);
-        Assert.Empty(cut.FindAll(".empty-state"));
+            var cut = ctx.Render<CategoriesPage>();
+
+            Assert.Single(cut.FindAll(".mud-progress-circular"));
+            Assert.Empty(cut.FindAll(".mud-card"));
+            Assert.Empty(cut.FindAll(".error-state"));
+        }
+
+        [Fact]
+        public async Task ErrorState_ShowsErrorMessageAndRetry()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.AddState<Category>().SetError();
+
+            var cut = ctx.Render<CategoriesPage>();
+
+            Assert.Equal(ctx.Localizer()["ErrorLoadingCategories"].Value, cut.Find(".error-state").TextContent.Trim());
+            Assert.Empty(cut.FindAll(".mud-progress-circular"));
+            Assert.Single(cut.FindAll("button"));
+        }
+
+        [Fact]
+        public async Task EmptyState_ShowsEmptyMessage()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.AddState<Category>().SetItems(new List<Category>());
+
+            var cut = ctx.Render<CategoriesPage>();
+
+            Assert.Equal(ctx.Localizer()["CategoriesYetEmpty"].Value, cut.Find(".empty-state").TextContent.Trim());
+            Assert.Empty(cut.FindAll(".mud-card"));
+        }
+
+        [Fact]
+        public async Task SuccessState_ShowsCardForEachCategory()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.AddState<Category>().SetItems(Sample());
+
+            var cut = ctx.Render<CategoriesPage>();
+
+            Assert.Equal(2, cut.FindAll(".mud-card").Count);
+            var text = TestHelpers.Text(cut.Markup);
+            Assert.Contains("Овочі", text);
+            Assert.Contains("Фрукти", text);
+            Assert.Empty(cut.FindAll(".error-state"));
+        }
+
+        [Fact]
+        public async Task ChangingState_ReRendersPage()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            var state = ctx.AddState<Category>();
+            state.SetLoading();
+
+            var cut = ctx.Render<CategoriesPage>();
+            Assert.Single(cut.FindAll(".mud-progress-circular"));
+
+            state.SetItems(Sample());
+
+            cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".mud-card").Count), Timeout);
+            Assert.Empty(cut.FindAll(".mud-progress-circular"));
+
+            state.SetError();
+
+            cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".error-state")), Timeout);
+            Assert.Empty(cut.FindAll(".mud-card"));
+        }
+
+        [Fact]
+        public async Task RetryButton_ReloadsData()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.AddState<Category>().SetError();
+
+            var cut = ctx.Render<CategoriesPage>();
+            cut.Find("button").Click();
+
+            cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-card")), Timeout);
+            Assert.Empty(cut.FindAll(".error-state"));
+        }
+
+        [Fact]
+        public async Task SubscribeButton_NavigatesToSubscriptions()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.AddState<Category>().SetItems(Sample());
+
+            var cut = ctx.Render<CategoriesPage>();
+            cut.FindAll("button")[0].Click();
+
+            var nav = ctx.Services.GetRequiredService<NavigationManager>();
+            Assert.EndsWith("/subscriptions", nav.Uri);
+        }
     }
 }

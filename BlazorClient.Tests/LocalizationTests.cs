@@ -1,28 +1,60 @@
-﻿using Bunit;
+using System.ComponentModel.DataAnnotations;
+using BlazorClient.Models;
 using Xunit;
-using BlazorClient.Resources;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Localization;
-using System.Globalization;
 
 namespace BlazorClient.Tests
 {
-    public class LocalizationTests : BunitContext
+    public class LocalizationTests
     {
-        public LocalizationTests()
+        [Theory]
+        [InlineData("MySubscriptions", "Мої підписки", "My subscriptions")]
+        [InlineData("Save", "Зберегти", "Save")]
+        [InlineData("FilterAll", "Усі", "All")]
+        public async Task Localizer_ReturnsTextForSelectedCulture(string key, string uk, string en)
         {
-            Services.AddLocalization();
+            await using var ctx = TestHelpers.CreateContext();
+
+            using (new CultureScope("uk-UA"))
+            {
+                Assert.Equal(uk, ctx.Localizer()[key].Value);
+            }
+
+            using (new CultureScope("en-US"))
+            {
+                Assert.Equal(en, ctx.Localizer()[key].Value);
+            }
         }
 
         [Fact]
-        public void Should_Return_Ukrainian_Translation()
+        public async Task Localizer_FormatsNumbersByCulture()
         {
-            CultureInfo.CurrentCulture = new CultureInfo("uk-UA");
-            CultureInfo.CurrentUICulture = new CultureInfo("uk-UA");
+            await using var ctx = TestHelpers.CreateContext();
 
-            var localizer = Services.BuildServiceProvider().GetRequiredService<IStringLocalizer<AppResources>>();
+            using (new CultureScope("uk-UA"))
+            {
+                Assert.Contains("3,5", ctx.Localizer()["ThresholdLine", "Київ", 3.5m].Value);
+            }
 
-            Assert.NotNull(localizer["MySubscriptions"].Value);
+            using (new CultureScope("en-US"))
+            {
+                Assert.Contains("3.5", ctx.Localizer()["ThresholdLine", "Kyiv", 3.5m].Value);
+            }
+        }
+
+        [Fact]
+        public void ValidationMessages_FollowSelectedCulture()
+        {
+            static string EmailMessage(string culture)
+            {
+                using var scope = new CultureScope(culture);
+                var model = new SubscribeFormModel();
+                var results = new List<ValidationResult>();
+                Validator.TryValidateObject(model, new ValidationContext(model), results, validateAllProperties: true);
+                return results.First(r => r.MemberNames.Contains(nameof(SubscribeFormModel.Email))).ErrorMessage!;
+            }
+
+            Assert.Equal("Вкажіть електронну пошту", EmailMessage("uk-UA"));
+            Assert.Equal("Enter your email", EmailMessage("en-US"));
         }
     }
 }

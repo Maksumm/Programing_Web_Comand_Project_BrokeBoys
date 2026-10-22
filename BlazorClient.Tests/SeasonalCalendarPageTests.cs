@@ -1,76 +1,86 @@
 using BlazorClient.Models;
 using BlazorClient.Pages;
-using BlazorClient.Resources;
 using Bunit;
+using Xunit;
 
-namespace BlazorClient.Tests;
-
-public class SeasonalCalendarPageTests
+namespace BlazorClient.Tests
 {
-    [Fact]
-    public async Task Loading_ShowsSpinnerAndText_WithoutChart()
+    public class SeasonalCalendarPageTests
     {
-        await using var ctx = TestHelpers.CreateContext();
+        private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(3);
+        private const string MonthBar = "[style*='width: 7%']";
 
-        var cut = ctx.Render<SeasonalCalendarPage>(p => p.Add(c => c.IsLoading, true));
-
-        Assert.NotEmpty(cut.FindAll(".mud-progress-circular"));
-        Assert.Contains(AppResources.LoadingPrices, cut.Markup);
-        Assert.Empty(cut.FindAll(".month-column"));
-    }
-
-    [Fact]
-    public async Task Error_ShowsMessage_AndRetryInvokesCallback()
-    {
-        await using var ctx = TestHelpers.CreateContext();
-        var retried = 0;
-
-        var cut = ctx.Render<SeasonalCalendarPage>(p => p
-            .Add(c => c.HasError, true)
-            .Add(c => c.OnRetry, () => retried++));
-
-        Assert.Contains(AppResources.FailedToLoadData, cut.Markup);
-        Assert.Empty(cut.FindAll(".month-column"));
-
-        await cut.Find(".retry-button").ClickAsync();
-
-        Assert.Equal(1, retried);
-    }
-
-    [Fact]
-    public async Task Empty_ShowsPlaceholder_NotChart()
-    {
-        await using var ctx = TestHelpers.CreateContext();
-
-        var cut = ctx.Render<SeasonalCalendarPage>(p => p.Add(c => c.Prices, new List<SeasonalPrice>()));
-
-        Assert.Contains(AppResources.NothingSelectedYet, cut.Markup);
-        Assert.Empty(cut.FindAll(".month-column"));
-    }
-
-    [Fact]
-    public async Task NoParameters_IsEmptyState()
-    {
-        await using var ctx = TestHelpers.CreateContext();
-
-        var cut = ctx.Render<SeasonalCalendarPage>();
-
-        Assert.Contains(AppResources.NothingSelectedYet, cut.Markup);
-    }
-
-    [Fact]
-    public async Task Data_ShowsTwelveMonthColumns_AndTitle()
-    {
-        await using var ctx = TestHelpers.CreateContext();
-        var items = new List<SeasonalPrice>
+        private static List<SeasonalPrice> Sample() => new()
         {
-            new() { Id = 1, Name = "Дрова, дуб", Price = 1500m, Month = "Жовтень" }
+            new SeasonalPrice { Id = 1, Name = "Дрова, дуб", Price = 1500m, Month = "Жовтень" }
         };
 
-        var cut = ctx.Render<SeasonalCalendarPage>(p => p.Add(c => c.Prices, items));
+        [Fact]
+        public async Task LoadingState_ShowsSpinnerAndLoadingText()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.AddState<SeasonalPrice>().SetLoading();
 
-        Assert.Equal(12, cut.FindAll(".month-column").Count);
-        Assert.Contains(AppResources.FirewoodOakTitle, cut.Markup);
-        Assert.DoesNotContain(AppResources.NothingSelectedYet, cut.Markup);
+            var cut = ctx.Render<SeasonalCalendarPage>();
+
+            Assert.Single(cut.FindAll(".mud-progress-circular"));
+            Assert.Contains(ctx.Localizer()["LoadingPrices"].Value, TestHelpers.Text(cut.Markup));
+            Assert.Empty(cut.FindAll(MonthBar));
+        }
+
+        [Fact]
+        public async Task ErrorState_ShowsErrorTextAndRetryButton()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.AddState<SeasonalPrice>().SetError();
+
+            var cut = ctx.Render<SeasonalCalendarPage>();
+
+            var text = TestHelpers.Text(cut.Markup);
+            Assert.Contains(ctx.Localizer()["FailedToLoadData"].Value, text);
+            Assert.Contains(ctx.Localizer()["TryAgain"].Value, text);
+            Assert.Empty(cut.FindAll(".mud-progress-circular"));
+        }
+
+        [Fact]
+        public async Task EmptyState_ShowsNothingSelectedMessage()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.AddState<SeasonalPrice>().SetItems(new List<SeasonalPrice>());
+
+            var cut = ctx.Render<SeasonalCalendarPage>();
+
+            var text = TestHelpers.Text(cut.Markup);
+            Assert.Contains(ctx.Localizer()["NothingSelectedYet"].Value, text);
+            Assert.Empty(cut.FindAll(MonthBar));
+        }
+
+        [Fact]
+        public async Task SuccessState_ShowsTwelveMonthBars()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.AddState<SeasonalPrice>().SetItems(Sample());
+
+            var cut = ctx.Render<SeasonalCalendarPage>();
+
+            Assert.Equal(12, cut.FindAll(MonthBar).Count);
+            Assert.Contains(ctx.Localizer()["PriceThroughoutYear"].Value, TestHelpers.Text(cut.Markup));
+        }
+
+        [Fact]
+        public async Task ChangingState_ReRendersPage()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            var state = ctx.AddState<SeasonalPrice>();
+            state.SetLoading();
+
+            var cut = ctx.Render<SeasonalCalendarPage>();
+            Assert.Single(cut.FindAll(".mud-progress-circular"));
+
+            state.SetItems(Sample());
+
+            cut.WaitForAssertion(() => Assert.Equal(12, cut.FindAll(MonthBar).Count), Timeout);
+            Assert.Empty(cut.FindAll(".mud-progress-circular"));
+        }
     }
 }

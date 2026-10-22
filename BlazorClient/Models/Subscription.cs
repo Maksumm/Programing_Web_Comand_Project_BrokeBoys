@@ -6,5 +6,6 @@ namespace BlazorClient.Models
         public string Email { get; set; } = string.Empty;
         public string CategoryName { get; set; } = string.Empty;
         public decimal? Threshold { get; set; }
+        public bool IsActive { get; set; } = true;
     }
 }

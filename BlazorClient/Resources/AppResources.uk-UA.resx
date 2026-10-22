@@ -84,8 +84,12 @@
 
 	<data name="LoadingSubscriptions" xml:space="preserve"><value>Завантажуємо підписки...</value></data>
 	<data name="ErrorLoading" xml:space="preserve"><value>Помилка завантаження</value></data>
-	<data name="SubscriptionsEmpty" xml:space="preserve"><value>У вас ще немає підписок</value></data>
-	<data name="SubscriptionsEmptyHint" xml:space="preserve"><value>Додайте першу підписку у формі поруч.</value></data>
-	<data name="SubscriptionsCount" xml:space="preserve"><value>Підписок: {0}</value></data>
-	<data name="RemoveSubscription" xml:space="preserve"><value>Видалити підписку</value></data>
+	<data name="EmailRequired" xml:space="preserve"><value>Вкажіть електронну пошту</value></data>
+	<data name="EmailInvalid" xml:space="preserve"><value>Некоректна адреса електронної пошти</value></data>
+	<data name="CategoryRequired" xml:space="preserve"><value>Оберіть категорію</value></data>
+	<data name="ThresholdRange" xml:space="preserve"><value>Поріг має бути від 0,01 до 1000</value></data>
+	<data name="EmailLabel" xml:space="preserve"><value>Електронна пошта</value></data>
+	<data name="CategoryLabel" xml:space="preserve"><value>Категорія</value></data>
+	<data name="ThresholdLabel" xml:space="preserve"><value>Поріг (необов'язково)</value></data>
+	<data name="NoSubscriptionsYet" xml:space="preserve"><value>Підписок ще немає</value></data>
 </root>

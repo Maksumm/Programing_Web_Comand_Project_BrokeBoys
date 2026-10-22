@@ -1,29 +1,40 @@
-@using BlazorClient.Models
-@using MudBlazor
-
+@using System.Globalization
 <EditForm Model="@model" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
 
     <MudCard Class="pa-4">
         <MudCardContent>
-            <MudTextField Label="Електронна пошта"
+            <MudTextField T="string"
+                          Label="@L["EmailLabel"]"
                           @bind-Value="model.Email"
                           For="@(() => model.Email)"
                           Immediate="true"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense" />
 
-            <MudTextField Label="Категорія"
+            <MudTextField T="string"
+                          Label="@L["CategoryLabel"]"
                           @bind-Value="model.Category"
                           For="@(() => model.Category)"
                           Immediate="true"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
                           Class="mt-3" />
+
+            <MudNumericField T="decimal?"
+                             Label="@L["ThresholdLabel"]"
+                             @bind-Value="model.Threshold"
+                             For="@(() => model.Threshold)"
+                             Culture="@CultureInfo.CurrentCulture"
+                             Immediate="true"
+                             HideSpinButtons="true"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense"
+                             Class="mt-3" />
         </MudCardContent>
         <MudCardActions>
             <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary">
-                Підписатися
+                @L["Subscribe"]
             </MudButton>
         </MudCardActions>
     </MudCard>
@@ -40,12 +51,14 @@
         var snapshot = new SubscribeFormModel
         {
             Email = model.Email,
-            Category = model.Category
+            Category = model.Category,
+            Threshold = model.Threshold
         };
 
         await OnSubmitted.InvokeAsync(snapshot);
 
         model.Email = string.Empty;
         model.Category = string.Empty;
+        model.Threshold = null;
     }
 }

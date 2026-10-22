@@ -1,23 +1,36 @@
-<div class="d-flex justify-space-between align-center py-2 subscription-row">
+@using System.Globalization
+
+<div class="d-flex justify-space-between align-center w-100 py-3">
     <div>
-        <MudText Typo="Typo.subtitle2" Class="fw-bold">@Item.Email</MudText>
-        <MudText Typo="Typo.caption" Class="mud-text-secondary">@Details</MudText>
+        <MudText Typo="Typo.subtitle2" Class="fw-bold">@Subscription.CategoryName</MudText>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+            @if (Subscription.Threshold is decimal threshold)
+            {
+                @L["ThresholdLine", Subscription.Email, threshold.ToString(CultureInfo.CurrentCulture)]
+            }
+            else
+            {
+                @Subscription.Email
+            }
+        </MudText>
     </div>
-    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                   Size="Size.Small"
-                   AriaLabel="@L["RemoveSubscription"]"
-                   OnClick="Remove" />
+    <div class="d-flex align-center gap-2">
+        <MudChip T="string" Size="Size.Small" Style="background-color: #E2E8F0;">
+            @(Subscription.IsActive ? L["FilterActive"] : L["FilterPaused"])
+        </MudChip>
+        <MudSwitch T="bool" Value="Subscription.IsActive" ValueChanged="Toggled" Color="Color.Success" />
+    </div>
 </div>
 
 @code {
-    [Parameter, EditorRequired] public Subscription Item { get; set; } = default!;
+    [Parameter, EditorRequired] public Subscription Subscription { get; set; } = default!;
 
-    [Parameter] public EventCallback<int> OnRemove { get; set; }
+    /// <summary>Викликається, коли користувач вмикає чи вимикає підписку.</summary>
+    [Parameter] public EventCallback<Subscription> OnToggled { get; set; }
 
-    // Число в локалізованому рядку форматується за поточною культурою: «3,5» для uk-UA і «3.5» для en-US
-    private string Details => Item.Threshold is { } threshold
-        ? L["ThresholdLine", Item.CategoryName, threshold].Value
-        : Item.CategoryName;
-
-    private Task Remove() => OnRemove.InvokeAsync(Item.Id);
+    private Task Toggled(bool isActive)
+    {
+        Subscription.IsActive = isActive;
+        return OnToggled.InvokeAsync(Subscription);
+    }
 }

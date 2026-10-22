@@ -636,39 +636,51 @@ namespace BlazorClient.Resources {
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to У вас ще немає підписок.
-        /// </summary>
-        public static string SubscriptionsEmpty {
+        public static string EmailRequired {
             get {
-                return ResourceManager.GetString("SubscriptionsEmpty", resourceCulture);
+                return ResourceManager.GetString("EmailRequired", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Додайте першу підписку у формі поруч..
-        /// </summary>
-        public static string SubscriptionsEmptyHint {
+        public static string EmailInvalid {
             get {
-                return ResourceManager.GetString("SubscriptionsEmptyHint", resourceCulture);
+                return ResourceManager.GetString("EmailInvalid", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Підписок: {0}.
-        /// </summary>
-        public static string SubscriptionsCount {
+        public static string CategoryRequired {
             get {
-                return ResourceManager.GetString("SubscriptionsCount", resourceCulture);
+                return ResourceManager.GetString("CategoryRequired", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Видалити підписку.
-        /// </summary>
-        public static string RemoveSubscription {
+        public static string ThresholdRange {
             get {
-                return ResourceManager.GetString("RemoveSubscription", resourceCulture);
+                return ResourceManager.GetString("ThresholdRange", resourceCulture);
+            }
+        }
+        
+        public static string EmailLabel {
+            get {
+                return ResourceManager.GetString("EmailLabel", resourceCulture);
+            }
+        }
+        
+        public static string CategoryLabel {
+            get {
+                return ResourceManager.GetString("CategoryLabel", resourceCulture);
+            }
+        }
+        
+        public static string ThresholdLabel {
+            get {
+                return ResourceManager.GetString("ThresholdLabel", resourceCulture);
+            }
+        }
+        
+        public static string NoSubscriptionsYet {
+            get {
+                return ResourceManager.GetString("NoSubscriptionsYet", resourceCulture);
             }
         }
     }

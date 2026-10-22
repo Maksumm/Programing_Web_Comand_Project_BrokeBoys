@@ -1,0 +1,27 @@
+<MudCard Elevation="@(IsSelected ? 8 : 3)">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">@Category.Name</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudText Typo="Typo.body2" Class="mb-2">@Category.Description</MudText>
+        <MudChip T="string" Color="Color.Info" Size="Size.Small">
+            @L["TariffsLabel"]: @Category.SubscriptionsCount
+        </MudChip>
+    </MudCardContent>
+    <MudCardActions>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="Select">@L["Subscribe"]</MudButton>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired] public Category Category { get; set; } = default!;
+
+    [Parameter] public bool IsSelected { get; set; }
+
+    /// <summary>Викликається, коли користувач натискає «Підписатися» на картці.</summary>
+    [Parameter] public EventCallback<Category> OnSelected { get; set; }
+
+    private Task Select() => OnSelected.InvokeAsync(Category);
+}

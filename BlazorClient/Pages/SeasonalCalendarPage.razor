@@ -1,13 +1,15 @@
-﻿@page "/"
+@page "/"
 @page "/calendar"
 @using BlazorClient.Models
 @using MudBlazor
 @using Microsoft.Extensions.Localization
 @using BlazorClient.Resources
 @using System.Globalization
-@inject IStringLocalizer<AppResources> L
+@using BlazorClient.Services
+@implements IDisposable
+@inject ListState<SeasonalPrice> Store
 
-@if (IsLoading)
+@if (Store.State == ViewState.Loading)
 {
     <!-- Завантаження -->
     <MudPaper Class="pa-12 text-center my-8" Style="border-radius: 16px; background-color: white;" Elevation="0">
@@ -16,7 +18,7 @@
         <MudText Typo="Typo.body2" Class="mud-text-secondary">@L["TakesFewSeconds"]</MudText>
     </MudPaper>
 }
-else if (HasError)
+else if (Store.State == ViewState.Error)
 {
     <!-- Помилка -->
     <MudPaper Class="pa-12 text-center my-8" Style="border-radius: 16px; background-color: white;" Elevation="0">
@@ -25,12 +27,12 @@ else if (HasError)
         </MudAvatar>
         <MudText Typo="Typo.h5" Class="fw-bold mb-2">@L["FailedToLoadData"]</MudText>
         <MudText Typo="Typo.body2" Class="mud-text-secondary mb-6">@L["CheckInternetAndTryAgain"]</MudText>
-        <MudButton Variant="Variant.Filled" Style="background-color: #1E3A2B; color: white; border-radius: 20px; text-transform: none;" Class="px-6 retry-button" OnClick="Retry">
+        <MudButton Variant="Variant.Filled" Style="background-color: #1E3A2B; color: white; border-radius: 20px; text-transform: none;" Class="px-6" OnClick="Retry">
             @L["TryAgain"]
         </MudButton>
     </MudPaper>
 }
-else if (Prices == null || !Prices.Any())
+else if (Store.State == ViewState.Empty)
 {
     <!-- Порожня сторінка -->
     <MudPaper Class="pa-12 text-center my-8" Style="border-radius: 16px; background-color: white;" Elevation="0">
@@ -66,7 +68,7 @@ else
                 <div class="d-flex justify-space-between align-end mt-8" style="height: 180px; padding: 0 10px;">
                     @foreach (var m in _monthlyData)
                     {
-                        <div @key="m.Month" class="d-flex flex-column align-center month-column" style="width: 7%;">
+                        <div class="d-flex flex-column align-center" style="width: 7%;" @key="m.Month">
                             <MudText Typo="Typo.caption" Class="mb-1" Style="font-size: 10px;">@m.Value</MudText>
                             <div style="width: 100%; height: @((m.Value * 1.2).ToString("0.##", CultureInfo.InvariantCulture))px; background-color: @(m.IsCurrent ? "#1E3A2B" : "#C8D6CE"); border-radius: 4px 4px 0 0;"></div>
                             <MudText Typo="Typo.caption" Class="mt-2" Style="font-size: 11px; color: #666;">@m.Month</MudText>
@@ -104,13 +106,6 @@ else
 }
 
 @code {
-    [Parameter] public bool IsLoading { get; set; } = false;
-    [Parameter] public bool HasError { get; set; } = false;
-    [Parameter] public List<SeasonalPrice> Prices { get; set; } = new();
-    [Parameter] public EventCallback OnRetry { get; set; }
-
-    private Task Retry() => OnRetry.InvokeAsync();
-
     private record MonthValue(string Month, int Value, bool IsCurrent = false);
 
     private List<MonthValue> _monthlyData => new()
@@ -128,4 +123,16 @@ else
         new(L["Month_Nov"], 122),
         new(L["Month_Dec"], 130)
     };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Store.Changed += OnStoreChanged;
+        await Store.EnsureLoadedAsync(SampleData.GetPricesAsync);
+    }
+
+    private void OnStoreChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private Task Retry() => Store.ReloadAsync(SampleData.GetPricesAsync);
+
+    public void Dispose() => Store.Changed -= OnStoreChanged;
 }

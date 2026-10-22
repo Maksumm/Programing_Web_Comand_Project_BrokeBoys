@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
 
 <head>
     <meta charset="utf-8" />
@@ -12,6 +12,14 @@
     <link href="BlazorClient.styles.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+
+    <script>
+        // Мова документа відповідає обраній культурі (для скрінрідерів і перевірки орфографії)
+        try {
+            var storedCulture = localStorage.getItem("client_culture");
+            document.documentElement.lang = storedCulture ? storedCulture.split("-")[0] : "uk";
+        } catch (e) { }
+    </script>
 
     <script>
         // Якщо сторінка перезавантажується через зміну мови, ховаємо напис і смугу
