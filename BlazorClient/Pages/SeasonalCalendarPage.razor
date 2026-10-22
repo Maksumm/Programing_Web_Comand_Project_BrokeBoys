@@ -66,7 +66,7 @@ else
                 <div class="d-flex justify-space-between align-end mt-8" style="height: 180px; padding: 0 10px;">
                     @foreach (var m in _monthlyData)
                     {
-                        <div class="d-flex flex-column align-center" style="width: 7%;">
+                        <div @key="m.Month" class="d-flex flex-column align-center" style="width: 7%;">
                             <MudText Typo="Typo.caption" Class="mb-1" Style="font-size: 10px;">@m.Value</MudText>
                             <div style="width: 100%; height: @((m.Value * 1.2).ToString("0.##", CultureInfo.InvariantCulture))px; background-color: @(m.IsCurrent ? "#1E3A2B" : "#C8D6CE"); border-radius: 4px 4px 0 0;"></div>
                             <MudText Typo="Typo.caption" Class="mt-2" Style="font-size: 11px; color: #666;">@m.Month</MudText>

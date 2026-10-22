@@ -15,6 +15,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddMudServices();
 builder.Services.AddLocalization();
 builder.Services.AddScoped<CultureService>();
+builder.Services.AddScoped<SubscriptionState>();
 
 var host = builder.Build();
 
