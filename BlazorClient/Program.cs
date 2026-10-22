@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using BlazorClient;
+using BlazorClient.Models;
 using BlazorClient.Services;
+using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
-using System.Globalization;
-using Microsoft.JSInterop;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -15,20 +15,15 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddMudServices();
 builder.Services.AddLocalization();
 builder.Services.AddScoped<CultureService>();
-builder.Services.AddScoped<SubscriptionState>();
+
+// Стан екранів (scoped): сторінки читають і підписуються на зміни.
+builder.Services.AddScoped<ListState<Category>>();
+builder.Services.AddScoped<ListState<SeasonalPrice>>();
+builder.Services.AddScoped<ListState<Subscription>>();
 
 var host = builder.Build();
 
-var js = host.Services.GetRequiredService<IJSRuntime>();
-string? cultureString = null;
-try
-{
-    cultureString = await js.InvokeAsync<string?>("localStorage.getItem", "client_culture");
-}
-catch { }
-
-var culture = new CultureInfo(string.IsNullOrEmpty(cultureString) ? "uk-UA" : cultureString);
-CultureInfo.DefaultThreadCurrentCulture = culture;
-CultureInfo.DefaultThreadCurrentUICulture = culture;
+// Застосовуємо культуру, яку користувач обрав раніше (localStorage).
+await host.Services.GetRequiredService<CultureService>().InitializeAsync();
 
 await host.RunAsync();

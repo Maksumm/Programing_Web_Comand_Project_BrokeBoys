@@ -636,111 +636,51 @@ namespace BlazorClient.Resources {
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to У вас ще немає підписок.
-        /// </summary>
-        public static string SubscriptionsEmpty {
-            get {
-                return ResourceManager.GetString("SubscriptionsEmpty", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Додайте першу підписку у формі поруч..
-        /// </summary>
-        public static string SubscriptionsEmptyHint {
-            get {
-                return ResourceManager.GetString("SubscriptionsEmptyHint", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Підписок: {0}.
-        /// </summary>
-        public static string SubscriptionsCount {
-            get {
-                return ResourceManager.GetString("SubscriptionsCount", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Видалити підписку.
-        /// </summary>
-        public static string RemoveSubscription {
-            get {
-                return ResourceManager.GetString("RemoveSubscription", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Електронна пошта.
-        /// </summary>
-        public static string EmailLabel {
-            get {
-                return ResourceManager.GetString("EmailLabel", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Категорія.
-        /// </summary>
-        public static string CategoryLabel {
-            get {
-                return ResourceManager.GetString("CategoryLabel", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Вкажіть електронну пошту.
-        /// </summary>
         public static string EmailRequired {
             get {
                 return ResourceManager.GetString("EmailRequired", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Некоректна адреса електронної пошти.
-        /// </summary>
         public static string EmailInvalid {
             get {
                 return ResourceManager.GetString("EmailInvalid", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Вкажіть категорію.
-        /// </summary>
         public static string CategoryRequired {
             get {
                 return ResourceManager.GetString("CategoryRequired", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Поріг.
-        /// </summary>
-        public static string ThresholdLabel {
-            get {
-                return ResourceManager.GetString("ThresholdLabel", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Вкажіть число від 0,01 до 1000.
-        /// </summary>
         public static string ThresholdRange {
             get {
                 return ResourceManager.GetString("ThresholdRange", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Сторінку не знайдено.
-        /// </summary>
-        public static string NotFound {
+        public static string EmailLabel {
             get {
-                return ResourceManager.GetString("NotFound", resourceCulture);
+                return ResourceManager.GetString("EmailLabel", resourceCulture);
+            }
+        }
+        
+        public static string CategoryLabel {
+            get {
+                return ResourceManager.GetString("CategoryLabel", resourceCulture);
+            }
+        }
+        
+        public static string ThresholdLabel {
+            get {
+                return ResourceManager.GetString("ThresholdLabel", resourceCulture);
+            }
+        }
+        
+        public static string NoSubscriptionsYet {
+            get {
+                return ResourceManager.GetString("NoSubscriptionsYet", resourceCulture);
             }
         }
     }

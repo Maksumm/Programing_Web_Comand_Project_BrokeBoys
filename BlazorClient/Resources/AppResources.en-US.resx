@@ -84,16 +84,12 @@
 
 	<data name="LoadingSubscriptions" xml:space="preserve"><value>Loading subscriptions...</value></data>
 	<data name="ErrorLoading" xml:space="preserve"><value>Loading error</value></data>
-	<data name="SubscriptionsEmpty" xml:space="preserve"><value>You have no subscriptions yet</value></data>
-	<data name="SubscriptionsEmptyHint" xml:space="preserve"><value>Add your first subscription using the form.</value></data>
-	<data name="SubscriptionsCount" xml:space="preserve"><value>Subscriptions: {0}</value></data>
-	<data name="RemoveSubscription" xml:space="preserve"><value>Remove subscription</value></data>
-	<data name="EmailLabel" xml:space="preserve"><value>Email</value></data>
-	<data name="CategoryLabel" xml:space="preserve"><value>Category</value></data>
 	<data name="EmailRequired" xml:space="preserve"><value>Enter your email</value></data>
 	<data name="EmailInvalid" xml:space="preserve"><value>Invalid email address</value></data>
-	<data name="CategoryRequired" xml:space="preserve"><value>Enter a category</value></data>
-	<data name="ThresholdLabel" xml:space="preserve"><value>Threshold</value></data>
-	<data name="ThresholdRange" xml:space="preserve"><value>Enter a number between 0.01 and 1000</value></data>
-	<data name="NotFound" xml:space="preserve"><value>Page not found</value></data>
+	<data name="CategoryRequired" xml:space="preserve"><value>Choose a category</value></data>
+	<data name="ThresholdRange" xml:space="preserve"><value>Threshold must be between 0.01 and 1000</value></data>
+	<data name="EmailLabel" xml:space="preserve"><value>Email</value></data>
+	<data name="CategoryLabel" xml:space="preserve"><value>Category</value></data>
+	<data name="ThresholdLabel" xml:space="preserve"><value>Threshold (optional)</value></data>
+	<data name="NoSubscriptionsYet" xml:space="preserve"><value>No subscriptions yet</value></data>
 </root>

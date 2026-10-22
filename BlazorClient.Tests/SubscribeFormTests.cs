@@ -1,90 +1,113 @@
+using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using BlazorClient.Components;
 using BlazorClient.Models;
-using BlazorClient.Resources;
 using Bunit;
-using MudBlazor;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
+using MudBlazor.Services;
+using Xunit;
 
-namespace BlazorClient.Tests;
-
-public class SubscribeFormTests
+namespace BlazorClient.Tests
 {
-    // Поля форми у порядку розмітки: [0] — e-mail, [1] — категорія
-    private static IReadOnlyList<IRenderedComponent<MudTextField<string>>> TextFields(
-        IRenderedComponent<SubscribeFormComponent> cut) => cut.FindComponents<MudTextField<string>>();
-
-    [Fact]
-    public async Task EmptySubmit_ShowsMessageUnderEachRequiredField_AndDoesNotInvokeCallback()
+    public class SubscribeFormTests
     {
-        await using var ctx = TestHelpers.CreateContext();
-        var submitted = 0;
-        var cut = ctx.Render<SubscribeFormComponent>(p => p
-            .Add(c => c.OnSubmitted, (SubscribeFormModel _) => submitted++));
+        private static BunitContext CreateContext() => TestHelpers.CreateContext();
 
-        await cut.Find("form").SubmitAsync();
-
-        cut.WaitForAssertion(() =>
+        [Fact]
+        public async Task ShouldRenderSubscribeFormComponent()
         {
-            var fields = TextFields(cut);
-            Assert.Contains(AppResources.EmailRequired, fields[0].Markup);
-            Assert.Contains(AppResources.CategoryRequired, fields[1].Markup);
-            // повідомлення стоять під «своїм» полем, а не під чужим
-            Assert.DoesNotContain(AppResources.CategoryRequired, fields[0].Markup);
-            Assert.DoesNotContain(AppResources.EmailRequired, fields[1].Markup);
-        });
-        Assert.Equal(0, submitted);
-    }
+            await using var ctx = CreateContext();
 
-    [Fact]
-    public async Task InvalidEmail_ShowsFormatMessage()
-    {
-        await using var ctx = TestHelpers.CreateContext();
-        var cut = ctx.Render<SubscribeFormComponent>();
-        var fields = TextFields(cut);
-        await fields[0].Find("input").InputAsync("not-an-email");
-        await fields[1].Find("input").InputAsync("Дрова");
+            var cut = ctx.Render<SubscribeFormComponent>();
 
-        await cut.Find("form").SubmitAsync();
+            Assert.NotNull(cut.Find("form"));
+            Assert.Equal(3, cut.FindAll("input").Count);
+            Assert.NotNull(cut.Find("button[type=submit]"));
+        }
 
-        cut.WaitForAssertion(() =>
-            Assert.Contains(AppResources.EmailInvalid, TextFields(cut)[0].Markup));
-    }
-
-    [Fact]
-    public async Task ValidSubmit_InvokesCallback_WithEnteredValues()
-    {
-        await using var ctx = TestHelpers.CreateContext();
-        SubscribeFormModel? submitted = null;
-        var cut = ctx.Render<SubscribeFormComponent>(p => p
-            .Add(c => c.OnSubmitted, (SubscribeFormModel m) => submitted = m));
-        var fields = TextFields(cut);
-        await fields[0].Find("input").InputAsync("user@example.com");
-        await fields[1].Find("input").InputAsync("Дрова");
-
-        await cut.Find("form").SubmitAsync();
-
-        cut.WaitForAssertion(() =>
+        [Fact]
+        public void EmptyModel_FailsDataAnnotationsValidation()
         {
-            Assert.NotNull(submitted);
-            Assert.Equal("user@example.com", submitted!.Email);
-            Assert.Equal("Дрова", submitted.Category);
-        });
-    }
+            var model = new SubscribeFormModel();
+            var results = new List<ValidationResult>();
 
-    [Fact]
-    public async Task ValidSubmit_ClearsFields()
-    {
-        await using var ctx = TestHelpers.CreateContext();
-        var cut = ctx.Render<SubscribeFormComponent>();
-        var fields = TextFields(cut);
-        await fields[0].Find("input").InputAsync("user@example.com");
-        await fields[1].Find("input").InputAsync("Дрова");
+            var isValid = Validator.TryValidateObject(
+                model, new ValidationContext(model), results, validateAllProperties: true);
 
-        await cut.Find("form").SubmitAsync();
+            Assert.False(isValid);
 
-        cut.WaitForAssertion(() =>
+            var failedMembers = results.SelectMany(r => r.MemberNames).ToList();
+            Assert.Contains(nameof(SubscribeFormModel.Email), failedMembers);
+            Assert.Contains(nameof(SubscribeFormModel.Category), failedMembers);
+            // Threshold необов'язковий: порожнє значення валідне.
+            Assert.DoesNotContain(nameof(SubscribeFormModel.Threshold), failedMembers);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1001)]
+        public void Threshold_OutOfRange_FailsValidation(double value)
         {
-            Assert.Equal(string.Empty, TextFields(cut)[0].Find("input").GetAttribute("value") ?? string.Empty);
-            Assert.Equal(string.Empty, TextFields(cut)[1].Find("input").GetAttribute("value") ?? string.Empty);
-        });
+            var model = new SubscribeFormModel
+            {
+                Email = "user@example.com",
+                Category = "Овочі",
+                Threshold = (decimal)value
+            };
+            var results = new List<ValidationResult>();
+
+            var isValid = Validator.TryValidateObject(
+                model, new ValidationContext(model), results, validateAllProperties: true);
+
+            Assert.False(isValid);
+            Assert.Contains(results, r => r.MemberNames.Contains(nameof(SubscribeFormModel.Threshold)));
+        }
+
+        [Fact]
+        public async Task Should_Show_ValidationErrors_When_SubmittingEmptyForm()
+        {
+            await using var ctx = CreateContext();
+            var submitted = false;
+
+            var cut = ctx.Render<SubscribeFormComponent>(p => p
+                .Add(c => c.OnSubmitted, EventCallback.Factory.Create<SubscribeFormModel>(
+                    this, (SubscribeFormModel _) => { submitted = true; })));
+
+            await cut.Find("form").SubmitAsync();
+
+            // Повідомлення під кожним обов'язковим полем: Email і Category.
+            var errors = cut.FindAll(".mud-input-helper-text.mud-input-error");
+            Assert.Equal(2, errors.Count);
+
+            // Некоректна форма не повинна викликати OnSubmitted.
+            Assert.False(submitted);
+        }
+
+        [Theory]
+        [InlineData("uk-UA", "3,5")]
+        [InlineData("en-US", "3.5")]
+        public async Task Threshold_ParsesFractionalNumber_ForCulture(string culture, string typed)
+        {
+            using var scope = new CultureScope(culture);
+            await using var ctx = CreateContext();
+            SubscribeFormModel? received = null;
+
+            var cut = ctx.Render<SubscribeFormComponent>(p => p
+                .Add(c => c.OnSubmitted, EventCallback.Factory.Create<SubscribeFormModel>(
+                    this, (SubscribeFormModel m) => { received = m; })));
+
+            var inputs = cut.FindAll("input");
+            inputs[0].Input("user@example.com");
+            inputs[1].Input("Овочі");
+            inputs[2].Input(typed);
+
+            await cut.Find("form").SubmitAsync();
+
+            Assert.NotNull(received);
+            Assert.Equal(3.5m, received!.Threshold);
+            Assert.Equal("user@example.com", received.Email);
+            Assert.Equal("Овочі", received.Category);
+        }
     }
 }

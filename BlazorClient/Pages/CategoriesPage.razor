@@ -1,54 +1,62 @@
-﻿@page "/categories"
-@using MudBlazor
-@using BlazorClient.Models
-@using Microsoft.Extensions.Localization
-@using BlazorClient.Resources
-@inject IStringLocalizer<AppResources> L
+@page "/categories"
+@using BlazorClient.Services
+@implements IDisposable
+@inject ListState<Category> Store
+@inject NavigationManager Nav
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">@L["CategoriesTitle"]</MudText>
 
-    @if (IsLoading)
+    @switch (Store.State)
     {
-        <div class="d-flex justify-center my-8">
-            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
-        </div>
-    }
-    else if (HasError)
-    {
-        <div class="error-state">@L["ErrorLoadingCategories"]</div>
-    }
-    else if (Categories == null || !Categories.Any())
-    {
-        <div class="empty-state">@L["CategoriesYetEmpty"]</div>
-    }
-    else
-    {
-        <MudGrid>
-            @foreach (var category in Categories)
-            {
-                <MudItem @key="category.Id" xs="12" sm="6" md="4">
-                    <MudCard Elevation="3">
-                        <MudCardHeader>
-                            <CardHeaderContent>
-                                <MudText Typo="Typo.h6">@category.Name</MudText>
-                            </CardHeaderContent>
-                        </MudCardHeader>
-                        <MudCardContent>
-                            <MudText Typo="Typo.body2" Class="mb-2">@category.Description</MudText>
-                            <MudChip T="string" Color="Color.Info" Size="Size.Small">
-                                @L["TariffsLabel"]: @category.SubscriptionsCount
-                            </MudChip>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-            }
-        </MudGrid>
+        case ViewState.Loading:
+            <div class="d-flex justify-center my-8">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            </div>
+            break;
+
+        case ViewState.Error:
+            <div class="error-state">@L["ErrorLoadingCategories"]</div>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="Retry">@L["TryAgain"]</MudButton>
+            break;
+
+        case ViewState.Empty:
+            <div class="empty-state">@L["CategoriesYetEmpty"]</div>
+            break;
+
+        default:
+            <MudGrid>
+                @foreach (var category in Store.Items)
+                {
+                    <MudItem xs="12" sm="6" md="4" @key="category.Id">
+                        <CategoryCard Category="category"
+                                      IsSelected="@(_selectedId == category.Id)"
+                                      OnSelected="Select" />
+                    </MudItem>
+                }
+            </MudGrid>
+            break;
     }
 </MudContainer>
 
 @code {
-    [Parameter] public bool IsLoading { get; set; } = false;
-    [Parameter] public bool HasError { get; set; } = false;
-    [Parameter] public List<Category>? Categories { get; set; }
+    private int? _selectedId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Store.Changed += OnStoreChanged;
+        await Store.EnsureLoadedAsync(SampleData.GetCategoriesAsync);
+    }
+
+    private void OnStoreChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private Task Retry() => Store.ReloadAsync(SampleData.GetCategoriesAsync);
+
+    private void Select(Category category)
+    {
+        _selectedId = category.Id;
+        Nav.NavigateTo("subscriptions");
+    }
+
+    public void Dispose() => Store.Changed -= OnStoreChanged;
 }

@@ -1,85 +1,113 @@
 @page "/subscriptions"
+@using BlazorClient.Services
 @implements IDisposable
-@inject SubscriptionState State
+@inject ListState<Subscription> Store
 
-<div class="mb-6">
-    <MudText Typo="Typo.caption" Class="mud-text-secondary">@L["SubscriptionsCount", State.Items.Count]</MudText>
-    <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #1E3A2B;">@L["MySubscriptions"]</MudText>
-</div>
+@switch (Store.State)
+{
+    case ViewState.Loading:
+        <MudPaper Class="pa-12 text-center my-4" Style="border-radius: 16px; background-color: white;" Elevation="0">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" Class="mb-4" />
+            <MudText Typo="Typo.h6" Class="fw-bold">@L["LoadingSubscriptions"]</MudText>
+        </MudPaper>
+        break;
 
-@if (IsLoading)
-{
-    <MudPaper Class="pa-12 text-center my-4 loading-state" Style="border-radius: 16px; background-color: white;" Elevation="0">
-        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" Class="mb-4" />
-        <MudText Typo="Typo.h6" Class="fw-bold">@L["LoadingSubscriptions"]</MudText>
-    </MudPaper>
-}
-else if (HasError)
-{
-    <MudPaper Class="pa-12 text-center my-4 error-state" Style="border-radius: 16px; background-color: white;" Elevation="0">
-        <MudAvatar Style="background-color: #D1E2D9; color: #1E3A2B; width: 64px; height: 64px;" Class="mb-4">
-            <MudIcon Icon="@Icons.Material.Filled.PriorityHigh" Size="Size.Large" />
-        </MudAvatar>
-        <MudText Typo="Typo.h5" Class="fw-bold mb-2">@L["ErrorLoading"]</MudText>
-        <MudButton Variant="Variant.Filled"
-                   Class="mt-4 retry-button"
-                   Style="background-color: #1E3A2B; color: white; border-radius: 20px;"
-                   OnClick="Retry">
-            @L["TryAgain"]
-        </MudButton>
-    </MudPaper>
-}
-else
-{
-    <MudGrid>
-        <MudItem Xs="12" Md="8">
-            <MudPaper Class="pa-6" Style="border-radius: 16px; background-color: white;" Elevation="0">
-                <MudText Typo="Typo.subtitle1" Class="fw-bold mb-1">@L["PriceNotifications"]</MudText>
-                <MudText Typo="Typo.caption" Class="mud-text-secondary mb-4 d-block">@L["NotifyWhenIndexBelowThreshold"]</MudText>
+    case ViewState.Error:
+        <MudPaper Class="pa-12 text-center my-4" Style="border-radius: 16px; background-color: white;" Elevation="0">
+            <MudAvatar Style="background-color: #D1E2D9; color: #1E3A2B; width: 64px; height: 64px;" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.PriorityHigh" Size="Size.Large" />
+            </MudAvatar>
+            <MudText Typo="Typo.h5" Class="fw-bold mb-2">@L["ErrorLoading"]</MudText>
+            <MudButton Variant="Variant.Filled" Style="background-color: #1E3A2B; color: white; border-radius: 20px;" Class="mt-4" OnClick="Retry">
+                @L["TryAgain"]
+            </MudButton>
+        </MudPaper>
+        break;
 
-                @if (State.Items.Count == 0)
-                {
-                    <div class="empty-state text-center pa-6">
-                        <MudText Typo="Typo.subtitle2" Class="fw-bold">@L["SubscriptionsEmpty"]</MudText>
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@L["SubscriptionsEmptyHint"]</MudText>
-                    </div>
-                }
-                else
-                {
-                    <div class="subscription-list">
-                        @foreach (var item in State.Items)
+    default:
+        <div class="mb-6 d-flex justify-space-between align-center">
+            <div>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">@L["SubscriptionsTelegramActive", ActiveCount]</MudText>
+                <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #1E3A2B;">@L["MySubscriptions"]</MudText>
+            </div>
+        </div>
+
+        <MudGrid>
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-6" Style="border-radius: 16px; background-color: white;" Elevation="0">
+                    <MudText Typo="Typo.subtitle1" Class="fw-bold mb-1">@L["PriceNotifications"]</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary mb-4 d-block">@L["NotifyWhenIndexBelowThreshold"]</MudText>
+
+                    @if (Store.State == ViewState.Empty)
+                    {
+                        <div class="empty-state">@L["NoSubscriptionsYet"]</div>
+                    }
+                    else
+                    {
+                        foreach (var subscription in Store.Items)
                         {
-                            <SubscriptionRow @key="item.Id" Item="item" OnRemove="Remove" />
+                            <div @key="subscription.Id">
+                                <SubscriptionRow Subscription="subscription" OnToggled="OnToggled" />
+                                <MudDivider />
+                            </div>
                         }
-                    </div>
-                }
-            </MudPaper>
-        </MudItem>
+                    }
+                </MudPaper>
+            </MudItem>
 
-        <MudItem Xs="12" Md="4">
-            <MudPaper Class="pa-6" Style="border-radius: 16px; background-color: white;" Elevation="0">
-                <MudText Typo="Typo.subtitle2" Class="fw-bold mb-2">@L["WhereToSendNotifications"]</MudText>
-                <SubscribeFormComponent OnSubmitted="OnSubscribed" />
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-6 mb-4" Style="border-radius: 16px; background-color: #1E3A2B; color: white;" Elevation="0">
+                    <MudText Typo="Typo.caption" Style="opacity: 0.8;">@L["NextNotification"]</MudText>
+                    <MudText Typo="Typo.h5" Class="fw-bold mb-2">@L["MonthApril"]</MudText>
+                    <MudText Typo="Typo.body2" Style="opacity: 0.9;" Class="mb-4">@L["NextNotificationText", 18]</MudText>
+
+                    <MudDivider Style="background-color: rgba(255,255,255,0.2);" Class="my-3" />
+
+                    <div class="d-flex justify-space-between">
+                        <div>
+                            <MudText Typo="Typo.h6" Class="fw-bold">@ActiveCount</MudText>
+                            <MudText Typo="Typo.caption" Style="opacity: 0.8;">@L["ActiveSubscriptionsLabel"]</MudText>
+                        </div>
+                    </div>
+                </MudPaper>
+
+                <MudPaper Class="pa-6" Style="border-radius: 16px; background-color: white;" Elevation="0">
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold mb-2">@L["WhereToSendNotifications"]</MudText>
+                    <SubscribeFormComponent OnSubmitted="AddSubscription" />
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+        break;
 }
 
 @code {
-    [Parameter] public bool IsLoading { get; set; } = false;
-    [Parameter] public bool HasError { get; set; } = false;
-    [Parameter] public EventCallback OnRetry { get; set; }
+    private int ActiveCount => Store.Items.Count(s => s.IsActive);
 
-    protected override void OnInitialized() => State.Changed += HandleStateChanged;
+    protected override async Task OnInitializedAsync()
+    {
+        Store.Changed += OnStoreChanged;
+        await Store.EnsureLoadedAsync(SampleData.GetSubscriptionsAsync);
+    }
 
-    // Подія може прийти не з потоку рендерингу, тому InvokeAsync
-    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+    private void OnStoreChanged() => _ = InvokeAsync(StateHasChanged);
 
-    private Task Retry() => OnRetry.InvokeAsync();
+    private Task Retry() => Store.ReloadAsync(SampleData.GetSubscriptionsAsync);
 
-    private void Remove(int id) => State.Remove(id);
+    private void OnToggled(Subscription subscription) => Store.NotifyChanged();
 
-    private void OnSubscribed(SubscribeFormModel m) => State.Add(m.Email, m.Category, m.Threshold);
+    private void AddSubscription(SubscribeFormModel form)
+    {
+        var nextId = Store.Items.Count == 0 ? 1 : Store.Items.Max(s => s.Id) + 1;
 
-    public void Dispose() => State.Changed -= HandleStateChanged;
+        Store.Add(new Subscription
+        {
+            Id = nextId,
+            Email = form.Email,
+            CategoryName = form.Category,
+            Threshold = form.Threshold,
+            IsActive = true
+        });
+    }
+
+    public void Dispose() => Store.Changed -= OnStoreChanged;
 }
