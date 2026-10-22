@@ -1,81 +1,76 @@
-﻿using Bunit;
-using Xunit;
-using BlazorClient.Pages;
 using BlazorClient.Models;
-using MudBlazor.Services;
-using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System;
-using System.Net.Http;
+using BlazorClient.Pages;
+using BlazorClient.Resources;
+using Bunit;
 
-namespace BlazorClient.Tests
+namespace BlazorClient.Tests;
+
+public class SeasonalCalendarPageTests
 {
-    public class SeasonalCalendarPageTests
+    [Fact]
+    public async Task Loading_ShowsSpinnerAndText_WithoutChart()
     {
-        private static BunitContext CreateContext()
+        await using var ctx = TestHelpers.CreateContext();
+
+        var cut = ctx.Render<SeasonalCalendarPage>(p => p.Add(c => c.IsLoading, true));
+
+        Assert.NotEmpty(cut.FindAll(".mud-progress-circular"));
+        Assert.Contains(AppResources.LoadingPrices, cut.Markup);
+        Assert.Empty(cut.FindAll(".month-column"));
+    }
+
+    [Fact]
+    public async Task Error_ShowsMessage_AndRetryInvokesCallback()
+    {
+        await using var ctx = TestHelpers.CreateContext();
+        var retried = 0;
+
+        var cut = ctx.Render<SeasonalCalendarPage>(p => p
+            .Add(c => c.HasError, true)
+            .Add(c => c.OnRetry, () => retried++));
+
+        Assert.Contains(AppResources.FailedToLoadData, cut.Markup);
+        Assert.Empty(cut.FindAll(".month-column"));
+
+        await cut.Find(".retry-button").ClickAsync();
+
+        Assert.Equal(1, retried);
+    }
+
+    [Fact]
+    public async Task Empty_ShowsPlaceholder_NotChart()
+    {
+        await using var ctx = TestHelpers.CreateContext();
+
+        var cut = ctx.Render<SeasonalCalendarPage>(p => p.Add(c => c.Prices, new List<SeasonalPrice>()));
+
+        Assert.Contains(AppResources.NothingSelectedYet, cut.Markup);
+        Assert.Empty(cut.FindAll(".month-column"));
+    }
+
+    [Fact]
+    public async Task NoParameters_IsEmptyState()
+    {
+        await using var ctx = TestHelpers.CreateContext();
+
+        var cut = ctx.Render<SeasonalCalendarPage>();
+
+        Assert.Contains(AppResources.NothingSelectedYet, cut.Markup);
+    }
+
+    [Fact]
+    public async Task Data_ShowsTwelveMonthColumns_AndTitle()
+    {
+        await using var ctx = TestHelpers.CreateContext();
+        var items = new List<SeasonalPrice>
         {
-            var ctx = new BunitContext();
-            ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-            ctx.Services.AddMudServices();
-            ctx.Services.AddLocalization();
+            new() { Id = 1, Name = "Дрова, дуб", Price = 1500m, Month = "Жовтень" }
+        };
 
-            var httpClient = new HttpClient(new DummyHttpMessageHandler())
-            {
-                BaseAddress = new Uri("http://localhost")
-            };
-            ctx.Services.AddSingleton(httpClient);
+        var cut = ctx.Render<SeasonalCalendarPage>(p => p.Add(c => c.Prices, items));
 
-            return ctx;
-        }
-
-        [Fact]
-        public async Task ShouldRenderLoadingState()
-        {
-            await using var ctx = CreateContext();
-
-            var cut = ctx.Render<SeasonalCalendarPage>(p => p
-                .Add(c => c.IsLoading, true));
-
-            Assert.NotNull(cut.Instance);
-        }
-
-        [Fact]
-        public async Task ShouldRenderErrorState()
-        {
-            await using var ctx = CreateContext();
-
-            var cut = ctx.Render<SeasonalCalendarPage>(p => p
-                .Add(c => c.HasError, true));
-
-            Assert.NotNull(cut.Instance);
-        }
-
-        [Fact]
-        public async Task ShouldRenderEmptyState()
-        {
-            await using var ctx = CreateContext();
-
-            var cut = ctx.Render<SeasonalCalendarPage>(p => p
-                .Add(c => c.Prices, new List<SeasonalPrice>()));
-
-            Assert.NotNull(cut.Instance);
-        }
-
-        [Fact]
-        public async Task ShouldRenderSuccessStateWithData()
-        {
-            await using var ctx = CreateContext();
-
-            var items = new List<SeasonalPrice>
-            {
-                new SeasonalPrice { Id = 1, Name = "Яблука", Price = 25.5m }
-            };
-
-            var cut = ctx.Render<SeasonalCalendarPage>(p => p
-                .Add(c => c.Prices, items));
-
-            Assert.NotNull(cut.Instance);
-        }
+        Assert.Equal(12, cut.FindAll(".month-column").Count);
+        Assert.Contains(AppResources.FirewoodOakTitle, cut.Markup);
+        Assert.DoesNotContain(AppResources.NothingSelectedYet, cut.Markup);
     }
 }
