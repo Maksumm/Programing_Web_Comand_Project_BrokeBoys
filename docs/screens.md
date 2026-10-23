@@ -33,3 +33,5 @@
 | Значення поля на екрані за культурою | `SubscriptionsPageTests.Threshold_IsShownInRow_WithCultureSpecificSeparator`, `LocalizationTests.Localizer_FormatsNumbersByCulture` |
 | Екран двома мовами | `LocalizationTests.Localizer_ReturnsTextForSelectedCulture`, `LocalizationTests.ValidationMessages_FollowSelectedCulture` |
 | Вибір культури зберігається між візитами | `CultureServiceTests.GetSavedCulture_*`, `InitializeAsync_AppliesSavedCulture`, `ChangeCulture_SavesChoiceAndReloadsPage` |
+| Немає захардкоджених текстів | `HardcodedTextTests.RazorFiles_ContainNoHardcodedUkrainianText`, `HardcodedTextTests.SampleDataSource_ContainsNoHardcodedUkrainianText` |
+| Демо-дані за культурою | `SampleDataTests.SampleData_UsesTextsOfSelectedCulture`, `SampleDataTests.SampleData_InEnglish_ContainsNoUkrainianText` |
