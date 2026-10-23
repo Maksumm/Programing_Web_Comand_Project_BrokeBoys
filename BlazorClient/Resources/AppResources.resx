@@ -92,4 +92,7 @@
 	<data name="CategoryLabel" xml:space="preserve"><value>Категорія</value></data>
 	<data name="ThresholdLabel" xml:space="preserve"><value>Поріг (необов'язково)</value></data>
 	<data name="NoSubscriptionsYet" xml:space="preserve"><value>Підписок ще немає</value></data>
+	<data name="CategoryFirewoodDescription" xml:space="preserve"><value>Сезонні ціни на паливну деревину</value></data>
+	<data name="CategoryTiresDescription" xml:space="preserve"><value>Літня та зимова гума</value></data>
+	<data name="CategoryMaterialsDescription" xml:space="preserve"><value>Цегла, цемент, пиломатеріали</value></data>
 </root>
