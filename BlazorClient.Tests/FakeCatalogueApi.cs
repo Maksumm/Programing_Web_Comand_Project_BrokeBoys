@@ -15,14 +15,21 @@ namespace BlazorClient.Tests
 
         public List<(int Id, bool IsActive)> ActiveChanges { get; } = new();
 
+        /// <summary>Дані, які «сервер» віддає при читанні (наприклад, після кнопки «Спробувати ще раз»).</summary>
+        public List<Category> Categories { get; } = new();
+
+        public List<SeasonalPrice> Prices { get; } = new();
+
+        public List<Subscription> Subscriptions { get; } = new();
+
         public Task<IEnumerable<Category>> GetCategoriesAsync() =>
-            Task.FromResult<IEnumerable<Category>>(Array.Empty<Category>());
+            Task.FromResult<IEnumerable<Category>>(Categories.ToList());
 
         public Task<IEnumerable<SeasonalPrice>> GetCalendarAsync() =>
-            Task.FromResult<IEnumerable<SeasonalPrice>>(Array.Empty<SeasonalPrice>());
+            Task.FromResult<IEnumerable<SeasonalPrice>>(Prices.ToList());
 
         public Task<IEnumerable<Subscription>> GetSubscriptionsAsync() =>
-            Task.FromResult<IEnumerable<Subscription>>(Array.Empty<Subscription>());
+            Task.FromResult<IEnumerable<Subscription>>(Subscriptions.ToList());
 
         public Task<ApiResult<Subscription>> CreateSubscriptionAsync(SubscribeFormModel form)
         {

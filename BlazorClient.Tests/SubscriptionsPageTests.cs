@@ -147,9 +147,9 @@ namespace BlazorClient.Tests
         public async Task FailedCreate_ShowsLocalizedError_AndDoesNotAddRow()
         {
             await using var ctx = TestHelpers.CreateContext();
-            ctx.Services.GetRequiredService<FakeCatalogueApi>().FailWrites = true;
             var state = ctx.AddState<Subscription>();
             state.SetItems(new List<Subscription>());
+            ctx.Services.GetRequiredService<FakeCatalogueApi>().FailWrites = true;
 
             var cut = ctx.Render<SubscriptionsPage>();
             cut.FindAll("input")[0].Input("user@example.com");
@@ -165,10 +165,10 @@ namespace BlazorClient.Tests
         public async Task FailedToggle_RevertsSwitch_AndShowsError()
         {
             await using var ctx = TestHelpers.CreateContext();
-            var api = ctx.Services.GetRequiredService<FakeCatalogueApi>();
-            api.FailWrites = true;
             var items = new List<Subscription> { new Subscription { Id = 1, Email = "a@example.com", CategoryName = "Дрова" } };
             ctx.AddState<Subscription>().SetItems(items);
+            var api = ctx.Services.GetRequiredService<FakeCatalogueApi>();
+            api.FailWrites = true;
 
             var cut = ctx.Render<SubscriptionsPage>();
             cut.Find("input[type=checkbox]").Change(false);
@@ -184,9 +184,9 @@ namespace BlazorClient.Tests
         {
             await using var ctx = TestHelpers.CreateContext();
             ctx.JSInterop.Setup<bool>("confirm", _ => true).SetResult(true);
-            var api = ctx.Services.GetRequiredService<FakeCatalogueApi>();
             var state = ctx.AddState<Subscription>();
             state.SetItems(Sample());
+            var api = ctx.Services.GetRequiredService<FakeCatalogueApi>();
 
             var cut = ctx.Render<SubscriptionsPage>();
             cut.FindAll("button.mud-icon-button")[0].Click();
@@ -201,9 +201,9 @@ namespace BlazorClient.Tests
         {
             await using var ctx = TestHelpers.CreateContext();
             ctx.JSInterop.Setup<bool>("confirm", _ => true).SetResult(false);
-            var api = ctx.Services.GetRequiredService<FakeCatalogueApi>();
             var state = ctx.AddState<Subscription>();
             state.SetItems(Sample());
+            var api = ctx.Services.GetRequiredService<FakeCatalogueApi>();
 
             var cut = ctx.Render<SubscriptionsPage>();
             cut.FindAll("button.mud-icon-button")[0].Click();
