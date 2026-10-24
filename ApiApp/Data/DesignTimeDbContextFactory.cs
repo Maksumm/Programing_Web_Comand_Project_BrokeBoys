@@ -10,7 +10,7 @@ namespace ApiApp.Data;
 /// </summary>
 public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {
-    private const string Fallback = "Host=localhost;Port=5432;Database=catalogue;Username=postgres;Password=postgres";
+    private const string Fallback = "Host=localhost;Port=5433;Database=catalogue;Username=postgres;Password=postgres";
 
     public AppDbContext CreateDbContext(string[] args)
     {

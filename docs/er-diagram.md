@@ -69,7 +69,7 @@ erDiagram
 
 ```bash
 docker compose up -d
-dotnet user-secrets set "ConnectionStrings:Catalogue" "Host=localhost;Port=5432;Database=catalogue;Username=postgres;Password=postgres" --project ApiApp
+dotnet user-secrets set "ConnectionStrings:Catalogue" "Host=localhost;Port=5433;Database=catalogue;Username=postgres;Password=postgres" --project ApiApp
 dotnet tool install --global dotnet-ef            # або: dotnet tool update --global dotnet-ef
 dotnet ef migrations add InitialCreate --project ApiApp
 dotnet ef database update --project ApiApp
