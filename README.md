@@ -7,6 +7,7 @@ Blazor WebAssembly + MudBlazor. Інтерфейс українською та �
 
 `Layout`, `Pages`, `Components`, `Services`, `Models`, `Resources`.
 
+- `Services/ICatalogueApi` / `CatalogueApi` — типізований HTTP-клієнт до `ApiApp`: читання (категорії, календар, підписки) і запис підписок (створення, перемикач активності, видалення). Адреса API — `ApiBaseUrl` у `wwwroot/appsettings.json` (за замовчуванням `https://localhost:7253/`). Помилки сервера перетворюються на локалізовані повідомлення на екрані; недоступний сервер дає стан «помилка» з кнопкою повтору.
 - `Services/ListState<T>` — scoped-сервіс зі станом екрана (`Loading` / `Error` / `Empty` / `Success`) і подією `Changed`.
 - `Services/CultureService` — вибір мови: зберігає її в `localStorage`, застосовує при старті (`Program.cs`).
 - `Components/CategoryCard`, `SubscriptionRow` — дочірні компоненти з `[Parameter]` і `EventCallback`.
@@ -64,7 +65,12 @@ dotnet test ApiApp.Tests
 
 ## Запуск
 
+Спершу запустіть API, потім клієнт (у двох терміналах):
+
 ```bash
-dotnet run --project BlazorClient
+dotnet run --project ApiApp --launch-profile https      # https://localhost:7253
+dotnet run --project BlazorClient --launch-profile https # https://localhost:7223
 dotnet test
 ```
+
+Якщо браузер скаржиться на сертифікат: `dotnet dev-certs https --trust`.

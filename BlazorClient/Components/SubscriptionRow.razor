@@ -19,6 +19,7 @@
             @(Subscription.IsActive ? L["FilterActive"] : L["FilterPaused"])
         </MudChip>
         <MudSwitch T="bool" Value="Subscription.IsActive" ValueChanged="Toggled" Color="Color.Success" />
+        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" aria-label="@L["DeleteLabel"]" OnClick="Delete" />
     </div>
 </div>
 
@@ -27,6 +28,11 @@
 
     /// <summary>Викликається, коли користувач вмикає чи вимикає підписку.</summary>
     [Parameter] public EventCallback<Subscription> OnToggled { get; set; }
+
+    /// <summary>Викликається, коли користувач натискає «Видалити» (підтвердження запитує сторінка).</summary>
+    [Parameter] public EventCallback<Subscription> OnDeleted { get; set; }
+
+    private Task Delete() => OnDeleted.InvokeAsync(Subscription);
 
     private Task Toggled(bool isActive)
     {

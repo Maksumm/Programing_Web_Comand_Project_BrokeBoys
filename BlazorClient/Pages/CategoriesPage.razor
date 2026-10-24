@@ -2,6 +2,7 @@
 @using BlazorClient.Services
 @implements IDisposable
 @inject ListState<Category> Store
+@inject ICatalogueApi Api
 @inject NavigationManager Nav
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
@@ -45,12 +46,12 @@
     protected override async Task OnInitializedAsync()
     {
         Store.Changed += OnStoreChanged;
-        await Store.EnsureLoadedAsync(() => SampleData.GetCategoriesAsync(L));
+        await Store.EnsureLoadedAsync(Api.GetCategoriesAsync);
     }
 
     private void OnStoreChanged() => _ = InvokeAsync(StateHasChanged);
 
-    private Task Retry() => Store.ReloadAsync(() => SampleData.GetCategoriesAsync(L));
+    private Task Retry() => Store.ReloadAsync(Api.GetCategoriesAsync);
 
     private void Select(Category category)
     {

@@ -95,4 +95,11 @@
 	<data name="CategoryFirewoodDescription" xml:space="preserve"><value>Сезонні ціни на паливну деревину</value></data>
 	<data name="CategoryTiresDescription" xml:space="preserve"><value>Літня та зимова гума</value></data>
 	<data name="CategoryMaterialsDescription" xml:space="preserve"><value>Цегла, цемент, пиломатеріали</value></data>
+	<data name="ErrorApiUnavailable" xml:space="preserve"><value>Сервер недоступний. Спробуйте пізніше.</value></data>
+	<data name="ErrorInvalidData" xml:space="preserve"><value>Перевірте введені дані.</value></data>
+	<data name="ErrorCategoryNotFound" xml:space="preserve"><value>Такої категорії немає. Введіть назву з розділу «Категорії».</value></data>
+	<data name="ErrorSubscriptionExists" xml:space="preserve"><value>Цей e-mail уже підписаний на цю категорію.</value></data>
+	<data name="ErrorNotFound" xml:space="preserve"><value>Запис не знайдено — можливо, його вже видалено.</value></data>
+	<data name="ConfirmDeleteSubscription" xml:space="preserve"><value>Видалити підписку на «{0}»?</value></data>
+	<data name="DeleteLabel" xml:space="preserve"><value>Видалити</value></data>
 </root>
