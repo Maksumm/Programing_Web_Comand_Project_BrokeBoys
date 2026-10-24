@@ -3,7 +3,8 @@ using System.Net.Http.Json;
 
 namespace ApiApp.Tests;
 
-public class CategoriesTests : ApiTestBase
+[Collection("Api")]
+    public class CategoriesTests(PostgresFixture fixture) : ApiTestBase(fixture)
 {
     private sealed record CategoryDto(int Id, string NameUk, string NameEn, int ProductsCount, int SubscriptionsCount);
 
