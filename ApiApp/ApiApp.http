@@ -1,6 +1,32 @@
-@ApiApp_HostAddress = http://localhost:5242
+@ApiApp_HostAddress = https://localhost:7253
 
-GET {{ApiApp_HostAddress}}/weatherforecast/
+### List categories
+GET {{ApiApp_HostAddress}}/api/categories
 Accept: application/json
 
-###
+### Get one category (404 if missing)
+GET {{ApiApp_HostAddress}}/api/categories/1
+
+### Create category -> 201 + Location, 400 on bad fields, 409 on duplicate name
+POST {{ApiApp_HostAddress}}/api/categories
+Content-Type: application/json
+
+{ "nameUk": "Інструмент", "nameEn": "Tools", "descriptionUk": "Опис", "descriptionEn": "Description" }
+
+### Replace category -> 204
+PUT {{ApiApp_HostAddress}}/api/categories/1
+Content-Type: application/json
+
+{ "nameUk": "Дрова", "nameEn": "Firewood", "descriptionUk": "", "descriptionEn": "" }
+
+### Delete category -> 204 (409 while it has products)
+DELETE {{ApiApp_HostAddress}}/api/categories/4
+
+### Prices of one product (12 months)
+GET {{ApiApp_HostAddress}}/api/prices?productId=1
+
+### Subscriptions of one e-mail
+GET {{ApiApp_HostAddress}}/api/subscriptions?email=user@example.com
+
+### OpenAPI document (Development only)
+GET {{ApiApp_HostAddress}}/openapi/v1.json

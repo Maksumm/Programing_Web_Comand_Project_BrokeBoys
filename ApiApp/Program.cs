@@ -1,41 +1,50 @@
+using ApiApp.Common;
+using ApiApp.Data;
+using ApiApp.Features.Categories;
+using ApiApp.Features.Prices;
+using ApiApp.Features.Products;
+using ApiApp.Features.Subscriptions;
+
+const string ClientCorsPolicy = "Client";
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
+
+// Дані зберігаються в пам'яті процесу (робота 3); один екземпляр на весь застосунок.
+builder.Services.AddSingleton(_ => CatalogueStore.CreateSeeded());
+
+// CORS лише для адреси клієнта; заголовок Location відкриваємо, щоб клієнт міг його прочитати після POST.
+var clientOrigin = builder.Configuration["Cors:ClientOrigin"]
+    ?? throw new InvalidOperationException("Cors:ClientOrigin is not configured.");
+builder.Services.AddCors(options => options.AddPolicy(ClientCorsPolicy, policy => policy
+    .WithOrigins(clientOrigin)
+    .AllowAnyHeader()
+    .AllowAnyMethod()
+    .WithExposedHeaders("Location")));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Першим, щоб бачити остаточний код відповіді (разом з обробленими помилками).
+app.UseMiddleware<RequestLoggingMiddleware>();
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapOpenApi(); // /openapi/v1.json лише в Development
 }
 
 app.UseHttpsRedirection();
+app.UseCors(ClientCorsPolicy);
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+app.MapCategories();
+app.MapProducts();
+app.MapPrices();
+app.MapSubscriptions();
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+// Потрібен для WebApplicationFactory<Program> в інтеграційних тестах.
+public partial class Program { }
