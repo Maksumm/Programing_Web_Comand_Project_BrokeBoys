@@ -86,12 +86,12 @@
     protected override async Task OnInitializedAsync()
     {
         Store.Changed += OnStoreChanged;
-        await Store.EnsureLoadedAsync(SampleData.GetSubscriptionsAsync);
+        await Store.EnsureLoadedAsync(() => SampleData.GetSubscriptionsAsync(L));
     }
 
     private void OnStoreChanged() => _ = InvokeAsync(StateHasChanged);
 
-    private Task Retry() => Store.ReloadAsync(SampleData.GetSubscriptionsAsync);
+    private Task Retry() => Store.ReloadAsync(() => SampleData.GetSubscriptionsAsync(L));
 
     private void OnToggled(Subscription subscription) => Store.NotifyChanged();
 

@@ -97,10 +97,9 @@ namespace BlazorClient.Tests
                 .Add(c => c.OnSubmitted, EventCallback.Factory.Create<SubscribeFormModel>(
                     this, (SubscribeFormModel m) => { received = m; })));
 
-            var inputs = cut.FindAll("input");
-            inputs[0].Input("user@example.com");
-            inputs[1].Input("Овочі");
-            inputs[2].Input(typed);
+            cut.FindAll("input")[0].Input("user@example.com");
+            cut.FindAll("input")[1].Input("Овочі");
+            cut.FindAll("input")[2].Input(typed);
 
             await cut.Find("form").SubmitAsync();
 

@@ -127,12 +127,12 @@ else
     protected override async Task OnInitializedAsync()
     {
         Store.Changed += OnStoreChanged;
-        await Store.EnsureLoadedAsync(SampleData.GetPricesAsync);
+        await Store.EnsureLoadedAsync(() => SampleData.GetPricesAsync(L));
     }
 
     private void OnStoreChanged() => _ = InvokeAsync(StateHasChanged);
 
-    private Task Retry() => Store.ReloadAsync(SampleData.GetPricesAsync);
+    private Task Retry() => Store.ReloadAsync(() => SampleData.GetPricesAsync(L));
 
     public void Dispose() => Store.Changed -= OnStoreChanged;
 }

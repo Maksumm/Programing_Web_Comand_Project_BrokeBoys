@@ -47,8 +47,10 @@ namespace BlazorClient.Tests
 
             await Create(ctx).InitializeAsync();
 
-            Assert.Equal("en-US", CultureInfo.CurrentUICulture.Name);
-            Assert.Equal("en-US", CultureInfo.CurrentCulture.Name);
+            // Перевіряємо DefaultThread*: саме їх читає Blazor WASM після RunAsync(), а CurrentCulture,
+            // встановлена після await усередині async-методу, не повертається викликачеві (ExecutionContext).
+            Assert.Equal("en-US", CultureInfo.DefaultThreadCurrentUICulture?.Name);
+            Assert.Equal("en-US", CultureInfo.DefaultThreadCurrentCulture?.Name);
         }
 
         [Fact]
