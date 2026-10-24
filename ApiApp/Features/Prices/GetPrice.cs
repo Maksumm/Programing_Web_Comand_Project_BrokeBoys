@@ -1,6 +1,7 @@
 using ApiApp.Common;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 
 namespace ApiApp.Features.Prices;
 
@@ -11,9 +12,9 @@ internal static class GetPrice
             .WithName("GetPrice")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-    private static Results<Ok<PriceResponse>, ProblemHttpResult> Handle(int id, CatalogueStore store)
+    private static async Task<Results<Ok<PriceResponse>, ProblemHttpResult>> Handle(int id, AppDbContext db, CancellationToken ct)
     {
-        var item = store.GetPrice(id);
+        var item = await db.SeasonalPrices.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
         if (item is null)
         {
             return Problems.NotFound($"Price {id} was not found.");

@@ -1,6 +1,7 @@
 using ApiApp.Common;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 
 namespace ApiApp.Features.Products;
 
@@ -11,12 +12,12 @@ internal static class DeleteProduct
             .WithName("DeleteProduct")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-    private static Results<NoContent, ProblemHttpResult> Handle(int id, CatalogueStore store)
+    private static async Task<Results<NoContent, ProblemHttpResult>> Handle(int id, AppDbContext db, CancellationToken ct)
     {
-        var result = store.DeleteProduct(id);
-        if (result.Status == StoreStatus.NotFound)
+        var removed = await db.Products.Where(p => p.Id == id).ExecuteDeleteAsync(ct); // ціни видаляє каскад бази
+        if (removed == 0)
         {
-            return Problems.NotFound(result.Detail!);
+            return Problems.NotFound($"Product {id} was not found.");
         }
 
         return TypedResults.NoContent();

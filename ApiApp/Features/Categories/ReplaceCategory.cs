@@ -1,6 +1,7 @@
 using ApiApp.Common;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 
 namespace ApiApp.Features.Categories;
 
@@ -14,7 +15,7 @@ internal static class ReplaceCategory
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static Results<NoContent, ValidationProblem, ProblemHttpResult> Handle(int id, ReplaceCategoryRequest request, CatalogueStore store)
+    private static async Task<Results<NoContent, ValidationProblem, ProblemHttpResult>> Handle(int id, ReplaceCategoryRequest request, AppDbContext db, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .RequiredText(nameof(request.NameUk), request.NameUk)
@@ -26,15 +27,23 @@ internal static class ReplaceCategory
             return errors.ToResult();
         }
 
-        var result = store.ReplaceCategory(id, request.NameUk!.Trim(), request.NameEn!.Trim(), request.DescriptionUk?.Trim() ?? string.Empty, request.DescriptionEn?.Trim() ?? string.Empty);
-        if (result.Status == StoreStatus.NotFound)
+        var entity = await db.Categories.FirstOrDefaultAsync(c => c.Id == id, ct);
+        if (entity is null)
         {
-            return Problems.NotFound(result.Detail!);
+            return Problems.NotFound($"Category {id} was not found.");
         }
 
-        if (result.Status == StoreStatus.Conflict)
+        entity.NameUk = request.NameUk!.Trim();
+        entity.NameEn = request.NameEn!.Trim();
+        entity.DescriptionUk = request.DescriptionUk?.Trim() ?? string.Empty;
+        entity.DescriptionEn = request.DescriptionEn?.Trim() ?? string.Empty;
+        try
         {
-            return Problems.Conflict(result.Detail!);
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.UniqueViolation))
+        {
+            return Problems.Conflict("Another category already has this name.");
         }
 
         return TypedResults.NoContent();

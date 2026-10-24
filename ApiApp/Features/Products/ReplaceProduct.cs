@@ -1,6 +1,7 @@
 using ApiApp.Common;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 
 namespace ApiApp.Features.Products;
 
@@ -14,7 +15,7 @@ internal static class ReplaceProduct
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static Results<NoContent, ValidationProblem, ProblemHttpResult> Handle(int id, ReplaceProductRequest request, CatalogueStore store)
+    private static async Task<Results<NoContent, ValidationProblem, ProblemHttpResult>> Handle(int id, ReplaceProductRequest request, AppDbContext db, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .RequiredId(nameof(request.CategoryId), request.CategoryId)
@@ -25,20 +26,31 @@ internal static class ReplaceProduct
             return errors.ToResult();
         }
 
-        var result = store.ReplaceProduct(id, request.CategoryId!.Value, request.NameUk!.Trim(), request.NameEn!.Trim());
-        if (result.Status == StoreStatus.NotFound)
+        var entity = await db.Products.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (entity is null)
         {
-            return Problems.NotFound(result.Detail!);
+            return Problems.NotFound($"Product {id} was not found.");
         }
 
-        if (result.Status == StoreStatus.InvalidReference)
+        if (!await db.Categories.AnyAsync(c => c.Id == request.CategoryId, ct))
         {
-            return Problems.Invalid(result.Field!, result.Detail!);
+            return Problems.Invalid(nameof(request.CategoryId), "Category does not exist.");
         }
 
-        if (result.Status == StoreStatus.Conflict)
+        entity.CategoryId = request.CategoryId!.Value;
+        entity.NameUk = request.NameUk!.Trim();
+        entity.NameEn = request.NameEn!.Trim();
+        try
         {
-            return Problems.Conflict(result.Detail!);
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.UniqueViolation))
+        {
+            return Problems.Conflict("This category already has a product with this name.");
+        }
+        catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.ForeignKeyViolation))
+        {
+            return Problems.Invalid("CategoryId", "Category does not exist.");
         }
 
         return TypedResults.NoContent();

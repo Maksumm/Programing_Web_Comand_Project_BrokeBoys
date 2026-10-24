@@ -1,13 +1,53 @@
 namespace ApiApp.Data;
 
-// Незмінні записи: сховище міняє запис, створюючи новий (`with`), тому прочитані об'єкти безпечні для потоків.
-public sealed record Category(int Id, string NameUk, string NameEn, string DescriptionUk, string DescriptionEn);
+// Сутності схеми (3НФ). Лічильники на кшталт «кількість підписок» не зберігаються — їх обчислює запит.
 
-public sealed record Product(int Id, int CategoryId, string NameUk, string NameEn);
+public sealed class Category
+{
+    public int Id { get; set; }
+    public string NameUk { get; set; } = string.Empty;
+    public string NameEn { get; set; } = string.Empty;
+    public string DescriptionUk { get; set; } = string.Empty;
+    public string DescriptionEn { get; set; } = string.Empty;
 
-public sealed record SeasonalPrice(int Id, int ProductId, int Month, decimal Price);
+    public List<Product> Products { get; set; } = [];
+    public List<Subscription> Subscriptions { get; set; } = [];
+}
 
-public sealed record Subscription(int Id, string Email, int CategoryId, decimal? Threshold, bool IsActive);
+public sealed class Product
+{
+    public int Id { get; set; }
+    public int CategoryId { get; set; }
+    public string NameUk { get; set; } = string.Empty;
+    public string NameEn { get; set; } = string.Empty;
 
-/// <summary>Категорія разом з обчислюваними лічильниками (вони ніколи не зберігаються).</summary>
-public sealed record CategoryView(Category Category, int ProductsCount, int SubscriptionsCount);
+    public Category Category { get; set; } = null!;
+    public List<SeasonalPrice> Prices { get; set; } = [];
+}
+
+public sealed class SeasonalPrice
+{
+    public int Id { get; set; }
+    public int ProductId { get; set; }
+
+    /// <summary>Номер місяця 1–12.</summary>
+    public int Month { get; set; }
+
+    public decimal Price { get; set; }
+
+    public Product Product { get; set; } = null!;
+}
+
+public sealed class Subscription
+{
+    public int Id { get; set; }
+
+    /// <summary>Завжди в нижньому регістрі, щоб унікальність «e-mail + категорія» не залежала від регістру.</summary>
+    public string Email { get; set; } = string.Empty;
+
+    public int CategoryId { get; set; }
+    public decimal? Threshold { get; set; }
+    public bool IsActive { get; set; }
+
+    public Category Category { get; set; } = null!;
+}

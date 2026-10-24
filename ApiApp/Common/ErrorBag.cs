@@ -49,7 +49,13 @@ internal sealed class ErrorBag
             return Add(field, $"{CamelCase(field)} is required.");
         }
 
-        return new EmailAddressAttribute().IsValid(value.Trim())
+        var email = value.Trim();
+        if (email.Length > 254)
+        {
+            return Add(field, $"{CamelCase(field)} must be at most 254 characters.");
+        }
+
+        return new EmailAddressAttribute().IsValid(email)
             ? this
             : Add(field, $"{CamelCase(field)} is not a valid e-mail address.");
     }

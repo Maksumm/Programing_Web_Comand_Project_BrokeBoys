@@ -1,6 +1,7 @@
 using ApiApp.Common;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 
 namespace ApiApp.Features.Prices;
 
@@ -13,7 +14,7 @@ internal static class CreatePrice
             .WithName("CreatePrice")
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static Results<Created<PriceResponse>, ValidationProblem, ProblemHttpResult> Handle(CreatePriceRequest request, CatalogueStore store)
+    private static async Task<Results<Created<PriceResponse>, ValidationProblem, ProblemHttpResult>> Handle(CreatePriceRequest request, AppDbContext db, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .RequiredId(nameof(request.ProductId), request.ProductId)
@@ -24,18 +25,31 @@ internal static class CreatePrice
             return errors.ToResult();
         }
 
-        var result = store.AddPrice(request.ProductId!.Value, request.Month!.Value, request.Price!.Value);
-        if (result.Status == StoreStatus.InvalidReference)
+        if (!await db.Products.AnyAsync(p => p.Id == request.ProductId, ct))
         {
-            return Problems.Invalid(result.Field!, result.Detail!);
+            return Problems.Invalid(nameof(request.ProductId), "Product does not exist.");
         }
 
-        if (result.Status == StoreStatus.Conflict)
+        var entity = new SeasonalPrice
         {
-            return Problems.Conflict(result.Detail!);
+            ProductId = request.ProductId!.Value,
+            Month = request.Month!.Value,
+            Price = request.Price!.Value
+        };
+        db.SeasonalPrices.Add(entity);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.UniqueViolation))
+        {
+            return Problems.Conflict("This product already has a price for this month.");
+        }
+        catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.ForeignKeyViolation))
+        {
+            return Problems.Invalid("ProductId", "Product does not exist.");
         }
 
-        var response = PriceResponse.From(result.Value!);
-        return TypedResults.Created($"/api/prices/{response.Id}", response);
+        return TypedResults.Created($"/api/prices/{entity.Id}", PriceResponse.From(entity));
     }
 }

@@ -1,6 +1,7 @@
 using ApiApp.Common;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 
 namespace ApiApp.Features.Subscriptions;
 
@@ -13,7 +14,7 @@ internal static class CreateSubscription
             .WithName("CreateSubscription")
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static Results<Created<SubscriptionResponse>, ValidationProblem, ProblemHttpResult> Handle(CreateSubscriptionRequest request, CatalogueStore store)
+    private static async Task<Results<Created<SubscriptionResponse>, ValidationProblem, ProblemHttpResult>> Handle(CreateSubscriptionRequest request, AppDbContext db, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .Email(nameof(request.Email), request.Email)
@@ -24,18 +25,33 @@ internal static class CreateSubscription
             return errors.ToResult();
         }
 
-        var result = store.AddSubscription(request.Email!.Trim(), request.CategoryId!.Value, request.Threshold, request.IsActive);
-        if (result.Status == StoreStatus.InvalidReference)
+        var category = await db.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == request.CategoryId, ct);
+        if (category is null)
         {
-            return Problems.Invalid(result.Field!, result.Detail!);
+            return Problems.Invalid(nameof(request.CategoryId), "Category does not exist.");
         }
 
-        if (result.Status == StoreStatus.Conflict)
+        var entity = new Subscription
         {
-            return Problems.Conflict(result.Detail!);
+            Email = request.Email!.Trim().ToLowerInvariant(),
+            CategoryId = category.Id,
+            Threshold = request.Threshold,
+            IsActive = request.IsActive
+        };
+        db.Subscriptions.Add(entity);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.UniqueViolation))
+        {
+            return Problems.Conflict("This e-mail is already subscribed to this category.");
+        }
+        catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.ForeignKeyViolation))
+        {
+            return Problems.Invalid("CategoryId", "Category does not exist.");
         }
 
-        var response = SubscriptionResponse.From(result.Value!);
-        return TypedResults.Created($"/api/subscriptions/{response.Id}", response);
+        return TypedResults.Created($"/api/subscriptions/{entity.Id}", SubscriptionResponse.From(entity, category));
     }
 }

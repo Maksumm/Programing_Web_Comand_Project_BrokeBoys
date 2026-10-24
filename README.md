@@ -42,7 +42,7 @@ Blazor WebAssembly + MudBlazor. Інтерфейс українською та �
 
 ## Сервер: ASP.NET Core Web API (робота 3)
 
-`ApiApp` — Minimal API; дані зберігаються в пам'яті процесу (`Data/CatalogueStore`, потокобезпечний singleton з демо-даними).
+`ApiApp` — Minimal API; дані зберігаються в PostgreSQL через EF Core (`Data/AppDbContext`, схема й ER-діаграма — `docs/er-diagram.md`).
 Кожен endpoint лежить в окремому файлі в теці своєї можливості `Features/<Можливість>/`, а `Map<Можливість>()` (`MapGroup`) підключає її до `Program.cs` одним викликом.
 
 | Ресурс | Адреси | Відповіді |
@@ -58,10 +58,18 @@ Blazor WebAssembly + MudBlazor. Інтерфейс українською та �
 - CORS дозволено лише для адреси клієнта (`Cors:ClientOrigin` в `appsettings.json`, за замовчуванням `https://localhost:7223`); заголовок `Location` відкрито для читання.
 - Кожен запит логується: метод, шлях, код і тривалість у мс (`RequestLoggingMiddleware`).
 
+Перший запуск бази (потрібен Docker і `dotnet-ef`):
+
 ```bash
-dotnet run --project ApiApp --launch-profile https   # https://localhost:7253
-dotnet test ApiApp.Tests
+docker compose up -d
+dotnet user-secrets set "ConnectionStrings:Catalogue" "Host=localhost;Port=5432;Database=catalogue;Username=postgres;Password=postgres" --project ApiApp
+dotnet tool install --global dotnet-ef
+dotnet ef database update --project ApiApp            # застосовує міграції (схему змінюють лише вони)
+dotnet run --project ApiApp --launch-profile https    # https://localhost:7253; в Development наповнює порожню базу демо-даними
+dotnet test ApiApp.Tests                              # Testcontainers сам запускає postgres:18-alpine — Docker має працювати
 ```
+
+Читання виконується асинхронно з `AsNoTracking()`; пов'язані записи підписок завантажуються одним запитом через `Include`.
 
 ## Запуск
 
