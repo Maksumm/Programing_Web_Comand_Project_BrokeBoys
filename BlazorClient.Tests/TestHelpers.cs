@@ -21,6 +21,10 @@ namespace BlazorClient.Tests
             ctx.JSInterop.Mode = JSRuntimeMode.Loose;
             ctx.Services.AddMudServices();
             ctx.Services.AddLocalization();
+
+            var api = new FakeCatalogueApi();
+            ctx.Services.AddSingleton(api);
+            ctx.Services.AddSingleton<ICatalogueApi>(api);
             return ctx;
         }
 

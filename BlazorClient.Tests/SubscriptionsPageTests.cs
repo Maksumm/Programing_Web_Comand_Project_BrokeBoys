@@ -1,6 +1,7 @@
 using BlazorClient.Models;
 using BlazorClient.Pages;
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace BlazorClient.Tests
@@ -140,6 +141,75 @@ namespace BlazorClient.Tests
             cut.WaitForAssertion(() =>
                 Assert.Contains(ctx.Localizer()["SubscriptionsTelegramActive", 0].Value, TestHelpers.Text(cut.Markup)), Timeout);
             Assert.False(items[0].IsActive);
+        }
+
+        [Fact]
+        public async Task FailedCreate_ShowsLocalizedError_AndDoesNotAddRow()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.Services.GetRequiredService<FakeCatalogueApi>().FailWrites = true;
+            var state = ctx.AddState<Subscription>();
+            state.SetItems(new List<Subscription>());
+
+            var cut = ctx.Render<SubscriptionsPage>();
+            cut.FindAll("input")[0].Input("user@example.com");
+            cut.FindAll("input")[1].Input("Дрова");
+            await cut.Find("form").SubmitAsync();
+
+            cut.WaitForAssertion(() =>
+                Assert.Contains(ctx.Localizer()["ErrorSubscriptionExists"].Value, TestHelpers.Text(cut.Markup)), Timeout);
+            Assert.Empty(state.Items);
+        }
+
+        [Fact]
+        public async Task FailedToggle_RevertsSwitch_AndShowsError()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            var api = ctx.Services.GetRequiredService<FakeCatalogueApi>();
+            api.FailWrites = true;
+            var items = new List<Subscription> { new Subscription { Id = 1, Email = "a@example.com", CategoryName = "Дрова" } };
+            ctx.AddState<Subscription>().SetItems(items);
+
+            var cut = ctx.Render<SubscriptionsPage>();
+            cut.Find("input[type=checkbox]").Change(false);
+
+            cut.WaitForAssertion(() =>
+                Assert.Contains(ctx.Localizer()["ErrorApiUnavailable"].Value, TestHelpers.Text(cut.Markup)), Timeout);
+            Assert.True(items[0].IsActive);
+            Assert.Equal((1, false), Assert.Single(api.ActiveChanges));
+        }
+
+        [Fact]
+        public async Task Delete_AfterConfirmation_CallsApi_AndRemovesRow()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.JSInterop.Setup<bool>("confirm", _ => true).SetResult(true);
+            var api = ctx.Services.GetRequiredService<FakeCatalogueApi>();
+            var state = ctx.AddState<Subscription>();
+            state.SetItems(Sample());
+
+            var cut = ctx.Render<SubscriptionsPage>();
+            cut.FindAll("button.mud-icon-button")[0].Click();
+
+            cut.WaitForAssertion(() => Assert.Single(state.Items), Timeout);
+            Assert.Equal(new[] { 1 }, api.DeletedIds);
+            Assert.DoesNotContain("Дрова", TestHelpers.Text(cut.Markup));
+        }
+
+        [Fact]
+        public async Task Delete_WithoutConfirmation_DoesNothing()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.JSInterop.Setup<bool>("confirm", _ => true).SetResult(false);
+            var api = ctx.Services.GetRequiredService<FakeCatalogueApi>();
+            var state = ctx.AddState<Subscription>();
+            state.SetItems(Sample());
+
+            var cut = ctx.Render<SubscriptionsPage>();
+            cut.FindAll("button.mud-icon-button")[0].Click();
+
+            cut.WaitForAssertion(() => Assert.Equal(2, state.Items.Count), Timeout);
+            Assert.Empty(api.DeletedIds);
         }
     }
 }
