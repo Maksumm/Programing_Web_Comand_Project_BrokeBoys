@@ -1,0 +1,84 @@
+name: Client
+
+# Після кожного merge у main: тести клієнта -> розгортання в Azure Static Web Apps.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Test client
+        run: dotnet test BlazorClient.Tests --configuration Release
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      # Адреса API та ідентифікатори Entra ID беруться зі змінних середовища production і записуються у файл,
+      # який клієнт читає в Production (Blazor WebAssembly завантажує appsettings.Production.json).
+      - name: Write appsettings.Production.json
+        run: |
+          cat > BlazorClient/wwwroot/appsettings.Production.json <<EOF
+          {
+            "ApiBaseUrl": "${{ vars.API_BASE_URL }}",
+            "ApiScope": "${{ vars.API_SCOPE }}",
+            "AzureAd": {
+              "Authority": "https://login.microsoftonline.com/${{ secrets.AZURE_TENANT_ID }}",
+              "ClientId": "${{ vars.CLIENT_ID }}"
+            }
+          }
+          EOF
+
+      - name: Publish client
+        run: dotnet publish BlazorClient --configuration Release --output publish
+
+      - name: Sign in to Azure (OpenID Connect)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Токен розгортання Static Web Apps береться з Azure у момент запуску (не зберігається в GitHub).
+      - name: Get the Static Web Apps deployment token
+        id: swa
+        run: |
+          token=$(az staticwebapp secrets list \
+            --name "${{ vars.AZURE_STATIC_WEB_APP_NAME }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --query "properties.apiKey" --output tsv)
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa.outputs.token }}
+          action: upload
+          app_location: publish/wwwroot
+          skip_app_build: true
+          skip_api_build: true

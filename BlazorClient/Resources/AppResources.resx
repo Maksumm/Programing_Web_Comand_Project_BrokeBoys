@@ -108,4 +108,5 @@
 	<data name="NotAuthorizedMessage" xml:space="preserve"><value>У вас немає доступу до цієї сторінки.</value></data>
 	<data name="ErrorSignInRequired" xml:space="preserve"><value>Сеанс завершився. Увійдіть знову.</value></data>
 	<data name="ErrorForbidden" xml:space="preserve"><value>Недостатньо прав для цієї дії.</value></data>
+	<data name="LiveUpdates" xml:space="preserve"><value>Наживо</value></data>
 </root>

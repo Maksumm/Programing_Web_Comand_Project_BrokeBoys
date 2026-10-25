@@ -24,6 +24,21 @@ internal static class EntraAuthentication
                 // Імена claims лишаються такими, як у токені (scp, roles, name…), без перейменування на довгі URI.
                 options.MapInboundClaims = false;
 
+                // Браузерні WebSocket/SSE не можуть передати заголовок Authorization: SignalR надсилає токен у query (access_token).
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,

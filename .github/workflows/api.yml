@@ -1,0 +1,99 @@
+name: API
+
+# Після кожного merge у main: тести (разом з наскрізним) -> міграції через efbundle -> розгортання API в Azure App Service.
+# У pull request виконуються лише тести.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Build
+        run: dotnet build --configuration Release
+
+      # Testcontainers запускає PostgreSQL у Docker (на ubuntu-latest Docker уже є).
+      - name: Test API
+        run: dotnet test ApiApp.Tests --configuration Release --no-build
+
+      - name: Install Chromium for Playwright
+        run: pwsh E2ETests/bin/Release/net9.0/playwright.ps1 install --with-deps chromium
+
+      # Справжній API на Kestrel над PostgreSQL + справжній клієнт у Chromium: зміна ціни з'являється без перезавантаження.
+      - name: End-to-end test
+        run: dotnet test E2ETests --configuration Release --no-build
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production # тут лежать secrets і variables середовища production
+    permissions:
+      id-token: write # потрібно для входу в Azure через OpenID Connect
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      # Без збереженого пароля: GitHub видає короткочасний токен, Entra ID довіряє йому за federated credential.
+      - name: Sign in to Azure (OpenID Connect)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef --version "9.*"
+
+      - name: Build the migrations bundle
+        run: |
+          dotnet ef migrations bundle --project ApiApp --self-contained -r linux-x64 --output efbundle --force
+          chmod +x efbundle
+
+      - name: Allow this runner to reach PostgreSQL
+        run: |
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          az postgres flexible-server firewall-rule create \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.AZURE_POSTGRES_SERVER }}" \
+            --rule-name "github-runner" \
+            --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP"
+
+      - name: Apply migrations
+        env:
+          CONNECTION: ${{ secrets.MIGRATIONS_CONNECTION_STRING }}
+        run: ./efbundle --connection "$CONNECTION"
+
+      - name: Close the PostgreSQL firewall rule
+        if: always()
+        run: |
+          az postgres flexible-server firewall-rule delete \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.AZURE_POSTGRES_SERVER }}" \
+            --rule-name "github-runner" --yes
+
+      - name: Publish API
+        run: dotnet publish ApiApp --configuration Release --output publish
+
+      # Рядок підключення застосунку лежить в app settings App Service (ConnectionStrings__Catalogue), а не тут.
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_API_APP_NAME }}
+          package: publish

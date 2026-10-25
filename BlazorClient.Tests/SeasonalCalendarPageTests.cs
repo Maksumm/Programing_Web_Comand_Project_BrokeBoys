@@ -1,6 +1,8 @@
 using BlazorClient.Models;
 using BlazorClient.Pages;
+using BlazorClient.Services;
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace BlazorClient.Tests
@@ -121,6 +123,50 @@ namespace BlazorClient.Tests
 
             Assert.Equal(12, cut.FindAll(MonthBar).Count);
             Assert.Equal(11, cut.FindAll("[style*='height: 0px']").Count);
+        }
+
+        private static List<SeasonalPrice> Year(int categoryId, decimal julyPrice) =>
+            Enumerable.Range(1, 12).Select(m => new SeasonalPrice
+            {
+                Id = m,
+                Name = "Дрова, дуб",
+                CategoryId = categoryId,
+                MonthNumber = m,
+                Month = m.ToString(),
+                Price = m == 7 ? julyPrice : 1000m + m
+            }).ToList();
+
+        [Fact]
+        public async Task JoinsTheLiveGroup_OfTheDisplayedCategory_AndShowsTheLiveBadge()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.AddState<SeasonalPrice>().SetItems(Year(categoryId: 3, julyPrice: 1200m));
+            var live = ctx.Services.GetRequiredService<FakeLiveUpdates>();
+
+            var cut = ctx.Render<SeasonalCalendarPage>();
+
+            cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-live='connected']")), Timeout);
+            Assert.Equal(new[] { 3 }, live.JoinedCategories);
+        }
+
+        [Fact]
+        public async Task LiveMessage_RefreshesThePrices_WithoutShowingTheLoadingState()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            var state = ctx.AddState<SeasonalPrice>();
+            state.SetItems(Year(categoryId: 1, julyPrice: 1200m));
+            var live = ctx.Services.GetRequiredService<FakeLiveUpdates>();
+            var api = ctx.Services.GetRequiredService<FakeCatalogueApi>();
+            api.Prices.AddRange(Year(categoryId: 1, julyPrice: 4242m));
+
+            var cut = ctx.Render<SeasonalCalendarPage>();
+            Assert.Contains("1200", TestHelpers.Text(cut.Markup));
+
+            live.Raise(new PriceChanged("Updated", 1, 1, 7, 4242m));
+
+            cut.WaitForAssertion(() => Assert.Contains("4242", TestHelpers.Text(cut.Markup)), Timeout);
+            Assert.DoesNotContain("1200", TestHelpers.Text(cut.Markup));
+            Assert.Equal(ViewState.Success, state.State);
         }
     }
 }

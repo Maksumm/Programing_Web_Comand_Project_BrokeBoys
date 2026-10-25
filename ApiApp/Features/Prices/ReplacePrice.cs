@@ -1,5 +1,6 @@
 using ApiApp.Common;
 using ApiApp.Data;
+using ApiApp.Realtime;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,7 +17,8 @@ internal static class ReplacePrice
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static async Task<Results<NoContent, ValidationProblem, ProblemHttpResult>> Handle(int id, ReplacePriceRequest request, AppDbContext db, CancellationToken ct)
+    private static async Task<Results<NoContent, ValidationProblem, ProblemHttpResult>> Handle(
+        int id, ReplacePriceRequest request, AppDbContext db, IPriceNotifier notifier, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .RequiredId(nameof(request.ProductId), request.ProductId)
@@ -27,20 +29,28 @@ internal static class ReplacePrice
             return errors.ToResult();
         }
 
-        var entity = await db.SeasonalPrices.FirstOrDefaultAsync(p => p.Id == id, ct);
+        var entity = await db.SeasonalPrices.Include(p => p.Product).FirstOrDefaultAsync(p => p.Id == id, ct);
         if (entity is null)
         {
             return Problems.NotFound($"Price {id} was not found.");
         }
 
-        if (!await db.Products.AnyAsync(p => p.Id == request.ProductId, ct))
+        var newCategoryId = await db.Products.AsNoTracking()
+            .Where(p => p.Id == request.ProductId)
+            .Select(p => (int?)p.CategoryId)
+            .FirstOrDefaultAsync(ct);
+        if (newCategoryId is null)
         {
             return Problems.Invalid(nameof(request.ProductId), "Product does not exist.");
         }
 
+        var oldCategoryId = entity.Product.CategoryId;
         entity.ProductId = request.ProductId!.Value;
         entity.Month = request.Month!.Value;
         entity.Price = request.Price!.Value;
+
+        // Повторний PUT з тими самими значеннями нічого не змінює — і нічого не розсилає.
+        var changed = db.ChangeTracker.HasChanges();
         try
         {
             await db.SaveChangesAsync(ct);
@@ -52,6 +62,12 @@ internal static class ReplacePrice
         catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.ForeignKeyViolation))
         {
             return Problems.Invalid("ProductId", "Product does not exist.");
+        }
+
+        if (changed)
+        {
+            // Ціна могла перейти до товару іншої категорії: повідомляємо обидві категорії.
+            await notifier.NotifyAsync("Updated", entity.ProductId, entity.Month, entity.Price, [oldCategoryId, newCategoryId.Value], ct);
         }
 
         return TypedResults.NoContent();

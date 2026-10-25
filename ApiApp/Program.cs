@@ -5,6 +5,10 @@ using ApiApp.Features.Me;
 using ApiApp.Features.Prices;
 using ApiApp.Features.Products;
 using ApiApp.Features.Subscriptions;
+using ApiApp.Realtime;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
+using OpenTelemetry;
+using OpenTelemetry.Trace;
 using Microsoft.EntityFrameworkCore;
 
 const string ClientCorsPolicy = "Client";
@@ -13,6 +17,19 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
 builder.Services.AddEntraAuthentication();
+
+// Application Insights (Azure Monitor): вмикається, лише якщо задано рядок підключення (змінна середовища
+// APPLICATIONINSIGHTS_CONNECTION_STRING). Власні span-и (розсилка SignalR) реєструються завжди.
+var telemetry = builder.Services.AddOpenTelemetry();
+if (!string.IsNullOrWhiteSpace(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
+{
+    telemetry.UseAzureMonitor();
+}
+
+telemetry.WithTracing(tracing => tracing.AddSource(Telemetry.SourceName));
+
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IPriceNotifier, PriceNotifier>();
 builder.Services.AddOpenApi();
 
 // PostgreSQL через EF Core. Рядок підключення — ConnectionStrings:Catalogue (user-secrets / змінні середовища),
@@ -27,7 +44,8 @@ builder.Services.AddCors(options => options.AddPolicy(ClientCorsPolicy, policy =
     .WithOrigins(clientOrigin)
     .AllowAnyHeader()
     .AllowAnyMethod()
-    .WithExposedHeaders("Location")));
+    .WithExposedHeaders("Location")
+    .AllowCredentials())); // SignalR надсилає запит узгодження з обліковими даними; джерело задано явно, не "*"
 
 var app = builder.Build();
 
@@ -41,7 +59,7 @@ if (app.Configuration.GetValue<bool>("Seed:Demo"))
     }
     catch (Exception ex)
     {
-        app.Logger.LogWarning(ex, "Demo data was not seeded. Is PostgreSQL running and are the migrations applied (dotnet ef database update)?");
+        Log.DemoDataNotSeeded(app.Logger, ex);
     }
 }
 
@@ -61,6 +79,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapMe();
+app.MapHub<PricesHub>("/hubs/prices").RequireAuthorization(Policies.Read);
 app.MapCategories();
 app.MapProducts();
 app.MapPrices();

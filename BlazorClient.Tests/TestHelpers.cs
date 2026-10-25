@@ -26,6 +26,10 @@ namespace BlazorClient.Tests
             ctx.Services.AddSingleton(api);
             ctx.Services.AddSingleton<ICatalogueApi>(api);
             ctx.Services.AddScoped<CurrentUserState>();
+
+            var live = new FakeLiveUpdates();
+            ctx.Services.AddSingleton(live);
+            ctx.Services.AddSingleton<ILiveUpdates>(live);
             return ctx;
         }
 
