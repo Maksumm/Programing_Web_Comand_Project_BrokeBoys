@@ -12,6 +12,9 @@ namespace BlazorClient.Services
 
         Task<IEnumerable<Subscription>> GetSubscriptionsAsync();
 
+        /// <summary>Ім'я, пошта й ролі користувача за токеном; <c>null</c>, якщо сервер недоступний або відмовив.</summary>
+        Task<UserInfo?> GetCurrentUserAsync();
+
         Task<ApiResult<Subscription>> CreateSubscriptionAsync(SubscribeFormModel form);
 
         Task<ApiResult> SetSubscriptionActiveAsync(Subscription subscription, bool isActive);

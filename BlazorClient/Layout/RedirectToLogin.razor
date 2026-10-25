@@ -1,0 +1,6 @@
+@inject NavigationManager Navigation
+
+@code {
+    // Повертає користувача на ту саму сторінку після входу (returnUrl додається автоматично).
+    protected override void OnInitialized() => Navigation.NavigateToLogin("authentication/login");
+}

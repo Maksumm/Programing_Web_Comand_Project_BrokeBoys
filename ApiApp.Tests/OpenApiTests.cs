@@ -8,15 +8,18 @@ public class OpenApiTests
 {
     public static IEnumerable<object[]> Operations()
     {
-        // (ресурс, чи може видалення дати 409)
+        // (ресурс, чи може видалення дати 409). Кожна операція захищена: 401 — немає/неправильний токен,
+        // 403 — токен без потрібного scope або ролі.
         foreach (var (resource, deleteConflicts) in new[] { ("categories", true), ("products", false), ("prices", false), ("subscriptions", false) })
         {
-            yield return [$"/api/{resource}", "get", "200"];
-            yield return [$"/api/{resource}", "post", "201,400,409"];
-            yield return [$"/api/{resource}/{{id}}", "get", "200,404"];
-            yield return [$"/api/{resource}/{{id}}", "put", "204,400,404,409"];
-            yield return [$"/api/{resource}/{{id}}", "delete", deleteConflicts ? "204,404,409" : "204,404"];
+            yield return [$"/api/{resource}", "get", "200,401,403"];
+            yield return [$"/api/{resource}", "post", "201,400,409,401,403"];
+            yield return [$"/api/{resource}/{{id}}", "get", "200,404,401,403"];
+            yield return [$"/api/{resource}/{{id}}", "put", "204,400,404,409,401,403"];
+            yield return [$"/api/{resource}/{{id}}", "delete", deleteConflicts ? "204,404,409,401,403" : "204,404,401,403"];
         }
+
+        yield return ["/api/me", "get", "200,401,403"];
     }
 
     private static string Normalize(string path) => Regex.Replace(path, @"\{(\w+):\w+\}", "{$1}").TrimEnd('/');

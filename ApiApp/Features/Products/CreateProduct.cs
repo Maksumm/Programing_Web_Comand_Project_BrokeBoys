@@ -12,6 +12,7 @@ internal static class CreateProduct
     public static void Map(RouteGroupBuilder group) =>
         group.MapPost("/", Handle)
             .WithName("CreateProduct")
+            .RequireAuthorization(Policies.ManageCatalogue)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
     private static async Task<Results<Created<ProductResponse>, ValidationProblem, ProblemHttpResult>> Handle(CreateProductRequest request, AppDbContext db, CancellationToken ct)

@@ -12,6 +12,7 @@ internal static class CreateCategory
     public static void Map(RouteGroupBuilder group) =>
         group.MapPost("/", Handle)
             .WithName("CreateCategory")
+            .RequireAuthorization(Policies.ManageCatalogue)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
     private static async Task<Results<Created<CategoryResponse>, ValidationProblem, ProblemHttpResult>> Handle(CreateCategoryRequest request, AppDbContext db, CancellationToken ct)

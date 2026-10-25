@@ -25,6 +25,7 @@ namespace BlazorClient.Tests
             var api = new FakeCatalogueApi();
             ctx.Services.AddSingleton(api);
             ctx.Services.AddSingleton<ICatalogueApi>(api);
+            ctx.Services.AddScoped<CurrentUserState>();
             return ctx;
         }
 

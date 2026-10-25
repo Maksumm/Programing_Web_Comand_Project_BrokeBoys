@@ -17,9 +17,28 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 // Адреса API береться з wwwroot/appsettings.json (у проді її записує workflow релізу), а не з адреси самого клієнта.
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"]
     ?? throw new InvalidOperationException("ApiBaseUrl is not configured in wwwroot/appsettings.json.");
-builder.Services.AddScoped<ICatalogueApi>(sp => new CatalogueApi(
-    new HttpClient { BaseAddress = new Uri(apiBaseUrl) },
-    sp.GetRequiredService<IStringLocalizer<AppResources>>()));
+var apiScope = builder.Configuration["ApiScope"]
+    ?? throw new InvalidOperationException("ApiScope is not configured in wwwroot/appsettings.json.");
+
+// Вхід через Microsoft Entra ID (MSAL). Authority і ClientId беруться з розділу AzureAd у wwwroot/appsettings.json.
+builder.Services.AddMsalAuthentication(options =>
+{
+    builder.Configuration.Bind("AzureAd", options.ProviderOptions.Authentication);
+    options.ProviderOptions.DefaultAccessTokenScopes.Add(apiScope);
+    options.ProviderOptions.LoginMode = "redirect";
+});
+
+// Токен додається лише до запитів на адресу API.
+builder.Services.AddScoped<ApiAuthorizationMessageHandler>();
+builder.Services.AddScoped<ICatalogueApi>(sp =>
+{
+    var handler = sp.GetRequiredService<ApiAuthorizationMessageHandler>();
+    handler.InnerHandler = new HttpClientHandler();
+    return new CatalogueApi(
+        new HttpClient(handler) { BaseAddress = new Uri(apiBaseUrl) },
+        sp.GetRequiredService<IStringLocalizer<AppResources>>());
+});
+builder.Services.AddScoped<CurrentUserState>();
 
 builder.Services.AddMudServices();
 builder.Services.AddLocalization();

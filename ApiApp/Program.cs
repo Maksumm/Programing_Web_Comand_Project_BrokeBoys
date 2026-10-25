@@ -1,6 +1,7 @@
 using ApiApp.Common;
 using ApiApp.Data;
 using ApiApp.Features.Categories;
+using ApiApp.Features.Me;
 using ApiApp.Features.Prices;
 using ApiApp.Features.Products;
 using ApiApp.Features.Subscriptions;
@@ -11,6 +12,7 @@ const string ClientCorsPolicy = "Client";
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
+builder.Services.AddEntraAuthentication();
 builder.Services.AddOpenApi();
 
 // PostgreSQL через EF Core. Рядок підключення — ConnectionStrings:Catalogue (user-secrets / змінні середовища),
@@ -55,7 +57,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors(ClientCorsPolicy);
+app.UseAuthentication();
+app.UseAuthorization();
 
+app.MapMe();
 app.MapCategories();
 app.MapProducts();
 app.MapPrices();

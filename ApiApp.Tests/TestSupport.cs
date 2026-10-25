@@ -1,10 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Testcontainers.PostgreSql;
 
 namespace ApiApp.Tests;
@@ -25,8 +29,29 @@ public sealed class ApiFactory(string connectionString) : WebApplicationFactory<
         builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["ConnectionStrings:Catalogue"] = connectionString,
-            ["Seed:Demo"] = "false"
+            ["Seed:Demo"] = "false",
+            ["AzureAd:Instance"] = "https://login.microsoftonline.com/",
+            ["AzureAd:TenantId"] = TestTokens.TenantId,
+            ["AzureAd:ClientId"] = TestTokens.ApiClientId
         }));
+
+        // Підміняємо лише джерело ключів підпису (замість метаданих Entra ID). Перевірка audience, терміну дії,
+        // а також політики scope/ролей лишаються справжніми.
+        builder.ConfigureServices(services => services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+        {
+            var configuration = new OpenIdConnectConfiguration { Issuer = TestTokens.Issuer };
+            configuration.SigningKeys.Add(TestTokens.SigningKey);
+            options.Configuration = configuration;
+            options.ConfigurationManager = new StaticConfigurationManager<OpenIdConnectConfiguration>(configuration);
+        }));
+    }
+
+    /// <summary>Клієнт із bearer-токеном (за замовчуванням — з scope і ролями Admin та Subscriber).</summary>
+    public HttpClient CreateClientWithToken(string? token = null)
+    {
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", token ?? TestTokens.Create(roles: [TestTokens.AdminRole, TestTokens.SubscriberRole]));
+        return client;
     }
 }
 
@@ -73,7 +98,7 @@ public abstract class ApiTestBase(PostgresFixture fixture) : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await Postgres.ResetAsync();
-        Client = Factory.CreateClient();
+        Client = Factory.CreateClientWithToken(); // з усіма правами; тести доступу беруть окремі токени
     }
 
     public Task DisposeAsync()
