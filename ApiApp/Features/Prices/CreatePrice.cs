@@ -1,5 +1,6 @@
 using ApiApp.Common;
 using ApiApp.Data;
+using ApiApp.Realtime;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +16,8 @@ internal static class CreatePrice
             .RequireAuthorization(Policies.ManageCatalogue)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static async Task<Results<Created<PriceResponse>, ValidationProblem, ProblemHttpResult>> Handle(CreatePriceRequest request, AppDbContext db, CancellationToken ct)
+    private static async Task<Results<Created<PriceResponse>, ValidationProblem, ProblemHttpResult>> Handle(
+        CreatePriceRequest request, AppDbContext db, IPriceNotifier notifier, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .RequiredId(nameof(request.ProductId), request.ProductId)
@@ -26,7 +28,11 @@ internal static class CreatePrice
             return errors.ToResult();
         }
 
-        if (!await db.Products.AnyAsync(p => p.Id == request.ProductId, ct))
+        var categoryId = await db.Products.AsNoTracking()
+            .Where(p => p.Id == request.ProductId)
+            .Select(p => (int?)p.CategoryId)
+            .FirstOrDefaultAsync(ct);
+        if (categoryId is null)
         {
             return Problems.Invalid(nameof(request.ProductId), "Product does not exist.");
         }
@@ -51,6 +57,7 @@ internal static class CreatePrice
             return Problems.Invalid("ProductId", "Product does not exist.");
         }
 
+        await notifier.NotifyAsync("Created", entity.ProductId, entity.Month, entity.Price, [categoryId.Value], ct);
         return TypedResults.Created($"/api/prices/{entity.Id}", PriceResponse.From(entity));
     }
 }

@@ -71,6 +71,21 @@ namespace BlazorClient.Services
             await LoadAsync(loader);
         }
 
+        /// <summary>
+        /// Тихе оновлення (повідомлення «наживо»): без стану «завантаження». Якщо сервер не відповів, лишаються поточні дані.
+        /// </summary>
+        public async Task RefreshAsync(Func<Task<IEnumerable<T>>> loader)
+        {
+            try
+            {
+                SetItems(await loader());
+            }
+            catch
+            {
+                // лишаємо те, що вже показано
+            }
+        }
+
         private async Task LoadAsync(Func<Task<IEnumerable<T>>> loader)
         {
             try

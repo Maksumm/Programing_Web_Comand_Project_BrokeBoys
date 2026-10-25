@@ -64,6 +64,7 @@ namespace BlazorClient.Services
                     Name = name,
                     Price = p.Price,
                     MonthNumber = p.Month,
+                    CategoryId = product.CategoryId,
                     Month = _l["Month_" + MonthKeys[p.Month - 1]].Value
                 }).ToList();
         }

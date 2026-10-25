@@ -10,6 +10,7 @@
 @implements IDisposable
 @inject ListState<SeasonalPrice> Store
 @inject ICatalogueApi Api
+@inject ILiveUpdates Live
 
 @if (Store.State == ViewState.Loading)
 {
@@ -58,6 +59,10 @@ else
     <div class="mb-4">
         <MudText Typo="Typo.caption" Style="color: #666;">@L["Calendar"]</MudText>
         <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #1E3A2B;">@Store.Items[0].Name</MudText>
+        @if (Live.IsLive)
+        {
+            <span data-live="connected" class="mud-typography mud-typography-caption" style="color: #2D8A57;">● @L["LiveUpdates"]</span>
+        }
     </div>
 
     <MudGrid>
@@ -145,12 +150,50 @@ else
     protected override async Task OnInitializedAsync()
     {
         Store.Changed += OnStoreChanged;
+        Live.StateChanged += OnStoreChanged;
+        Live.PriceChanged += OnPriceChanged;
         await Store.EnsureLoadedAsync(Api.GetCalendarAsync);
+        await JoinLiveAsync();
     }
+
+    /// <summary>Підписка на групу категорії показаного товару: лише її зміни приходять на цю сторінку.</summary>
+    private async Task JoinLiveAsync()
+    {
+        var first = Store.Items.FirstOrDefault();
+        if (first is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await Live.JoinCategoryAsync(first.CategoryId);
+        }
+        catch (Exception)
+        {
+            // «наживо» необов'язкове: дані вже показано
+        }
+    }
+
+    /// <summary>Сервер повідомив про зміну: тихо перечитуємо ціни, сторінка не перезавантажується і не показує спінер.</summary>
+    private void OnPriceChanged(PriceChanged change) => _ = InvokeAsync(async () =>
+    {
+        await Store.RefreshAsync(Api.GetCalendarAsync);
+        await JoinLiveAsync();
+    });
 
     private void OnStoreChanged() => _ = InvokeAsync(StateHasChanged);
 
-    private Task Retry() => Store.ReloadAsync(Api.GetCalendarAsync);
+    private async Task Retry()
+    {
+        await Store.ReloadAsync(Api.GetCalendarAsync);
+        await JoinLiveAsync();
+    }
 
-    public void Dispose() => Store.Changed -= OnStoreChanged;
+    public void Dispose()
+    {
+        Store.Changed -= OnStoreChanged;
+        Live.StateChanged -= OnStoreChanged;
+        Live.PriceChanged -= OnPriceChanged;
+    }
 }

@@ -57,6 +57,7 @@ Blazor WebAssembly + MudBlazor. Інтерфейс українською та �
 - Документ OpenAPI: `/openapi/v1.json` (лише в `Development`).
 - CORS дозволено лише для адреси клієнта (`Cors:ClientOrigin` в `appsettings.json`, за замовчуванням `https://localhost:7223`); заголовок `Location` відкрито для читання.
 - Усі endpoint-и захищені токеном Microsoft Entra ID: читання вимагає scope `access_as_user`, зміна каталогу — ще й роль `Admin`, підписки — роль `Subscriber`; без токена 401, без прав 403. Таблиця — `docs/endpoints-security.md`, налаштування порталу — `docs/entra-setup.md`; `GET /api/me` повертає ім'я, пошту й ролі користувача.
+- Оновлення «наживо»: SignalR hub `/hubs/prices`; клієнт приєднується до групи категорії показаного товару, а після кожної збереженої зміни ціни (створення, заміна, видалення) сервер надсилає повідомлення лише групам її категорії. Розсилка виконується в окремому span (`BroadcastPriceChange`) і видна в Application Insights; логування — лише через `[LoggerMessage]`.
 - Кожен запит логується: метод, шлях, код і тривалість у мс (`RequestLoggingMiddleware`).
 
 Перший запуск бази (потрібен Docker і `dotnet-ef`):
@@ -83,3 +84,9 @@ dotnet test
 ```
 
 Якщо браузер скаржиться на сертифікат: `dotnet dev-certs https --trust`.
+
+## Релізи, телеметрія й наскрізний тест (робота 6)
+
+- `.github/workflows/api.yml` і `client.yml` — після кожного merge у `main` тести та розгортання (API → App Service, клієнт → Static Web Apps; міграції через efbundle; вхід в Azure через OpenID Connect). Налаштування Azure і GitHub — `docs/deploy-setup.md`.
+- Application Insights вмикається змінною середовища `APPLICATIONINSIGHTS_CONNECTION_STRING` (`UseAzureMonitor()`).
+- `E2ETests` — Playwright: справжній API на Kestrel над PostgreSQL (Testcontainers) і справжній клієнт у Chromium; перед розгортанням API його запускає `api.yml`.
