@@ -81,6 +81,7 @@ namespace BlazorClient.Tests
 
             Assert.Equal(new[] { 1, 10 }, prices.Select(p => p.MonthNumber));
             Assert.All(prices, p => Assert.Equal("Oak", p.Name));
+            Assert.All(prices, p => Assert.Equal(1, p.CategoryId)); // категорія товару — для групи SignalR
             Assert.Equal(1500m, prices[1].Price);
             Assert.Equal(lease.Context.Localizer()["Month_Oct"].Value, prices[1].Month);
             Assert.Contains(handler.Requests, r => r.Path == "/api/prices?productId=5");

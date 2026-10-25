@@ -14,7 +14,7 @@ using Testcontainers.PostgreSql;
 namespace ApiApp.Tests;
 
 /// <summary>Хост API проти вказаної бази PostgreSQL. Демо-дані вимкнено: тест сам готує дані через <see cref="PostgresFixture.ResetAsync"/>.</summary>
-public sealed class ApiFactory(string connectionString) : WebApplicationFactory<Program>
+public class ApiFactory(string connectionString) : WebApplicationFactory<Program>
 {
     /// <summary>Для тестів, яким база не потрібна (OpenAPI): підключення ніколи не відкривається.</summary>
     public const string NoDatabase = "Host=localhost;Port=1;Database=unused;Username=unused;Password=unused";
@@ -101,7 +101,7 @@ public abstract class ApiTestBase(PostgresFixture fixture) : IAsyncLifetime
         Client = Factory.CreateClientWithToken(); // з усіма правами; тести доступу беруть окремі токени
     }
 
-    public Task DisposeAsync()
+    public virtual Task DisposeAsync()
     {
         Client.Dispose();
         Factory.Dispose();
