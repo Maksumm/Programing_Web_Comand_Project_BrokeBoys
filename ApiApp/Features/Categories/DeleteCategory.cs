@@ -23,7 +23,7 @@ internal static class DeleteCategory
                 return Problems.NotFound($"Category {id} was not found.");
             }
         }
-        catch (Exception ex) when (PgErrors.Is(ex, PgErrors.ForeignKeyViolation))
+        catch (Exception ex) when (PgErrors.IsReferenceViolation(ex))
         {
             return Problems.Conflict("The category still has products; delete or move them first.");
         }
