@@ -4,6 +4,7 @@ using ApiApp.Features.Categories;
 using ApiApp.Features.Prices;
 using ApiApp.Features.Products;
 using ApiApp.Features.Subscriptions;
+using Microsoft.EntityFrameworkCore;
 
 const string ClientCorsPolicy = "Client";
 
@@ -12,8 +13,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 
-// Дані зберігаються в пам'яті процесу (робота 3); один екземпляр на весь застосунок.
-builder.Services.AddSingleton(_ => CatalogueStore.CreateSeeded());
+// PostgreSQL через EF Core. Рядок підключення — ConnectionStrings:Catalogue (user-secrets / змінні середовища),
+// читається при створенні контексту, а не під час запуску.
+builder.Services.AddDbContext<AppDbContext>((services, options) =>
+    options.UseNpgsql(services.GetRequiredService<IConfiguration>().GetConnectionString("Catalogue")));
 
 // CORS лише для адреси клієнта; заголовок Location відкриваємо, щоб клієнт міг його прочитати після POST.
 var clientOrigin = builder.Configuration["Cors:ClientOrigin"]
@@ -25,6 +28,20 @@ builder.Services.AddCors(options => options.AddPolicy(ClientCorsPolicy, policy =
     .WithExposedHeaders("Location")));
 
 var app = builder.Build();
+
+// Демо-дані лише для розробки (Seed:Demo = true в appsettings.Development.json). Схему створюють міграції, не застосунок.
+if (app.Configuration.GetValue<bool>("Seed:Demo"))
+{
+    using var scope = app.Services.CreateScope();
+    try
+    {
+        await DemoData.SeedAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>());
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "Demo data was not seeded. Is PostgreSQL running and are the migrations applied (dotnet ef database update)?");
+    }
+}
 
 // Першим, щоб бачити остаточний код відповіді (разом з обробленими помилками).
 app.UseMiddleware<RequestLoggingMiddleware>();

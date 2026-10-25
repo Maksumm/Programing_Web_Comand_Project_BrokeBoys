@@ -25,7 +25,7 @@ public class OpenApiTests
     [MemberData(nameof(Operations))]
     public async Task Document_ListsEveryCodeOfEveryEndpoint(string path, string method, string codes)
     {
-        using var factory = new ApiFactory();
+        using var factory = new ApiFactory(ApiFactory.NoDatabase);
         using var client = factory.CreateClient();
 
         var response = await client.GetAsync("/openapi/v1.json");
@@ -49,7 +49,7 @@ public class OpenApiTests
     [Fact]
     public async Task Document_IsNotPublished_OutsideDevelopment()
     {
-        using var factory = new ApiFactory { EnvironmentName = "Production" };
+        using var factory = new ApiFactory(ApiFactory.NoDatabase) { EnvironmentName = "Production" };
         using var client = factory.CreateClient();
 
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/openapi/v1.json")).StatusCode);

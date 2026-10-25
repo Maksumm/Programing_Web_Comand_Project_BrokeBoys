@@ -1,30 +1,86 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
+using ApiApp.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Testcontainers.PostgreSql;
 
 namespace ApiApp.Tests;
 
-/// <summary>Окремий хост API; кожен тест створює свій, тож дані in-memory не перетинаються між тестами.</summary>
-public sealed class ApiFactory : WebApplicationFactory<Program>
+/// <summary>Хост API проти вказаної бази PostgreSQL. Демо-дані вимкнено: тест сам готує дані через <see cref="PostgresFixture.ResetAsync"/>.</summary>
+public sealed class ApiFactory(string connectionString) : WebApplicationFactory<Program>
 {
+    /// <summary>Для тестів, яким база не потрібна (OpenAPI): підключення ніколи не відкривається.</summary>
+    public const string NoDatabase = "Host=localhost;Port=1;Database=unused;Username=unused;Password=unused";
+
     public string EnvironmentName { get; init; } = "Development";
 
-    protected override void ConfigureWebHost(IWebHostBuilder builder) => builder.UseEnvironment(EnvironmentName);
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseEnvironment(EnvironmentName);
+
+        // AddInMemoryCollection додається після appsettings*.json, тож має пріоритет над ними.
+        builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:Catalogue"] = connectionString,
+            ["Seed:Demo"] = "false"
+        }));
+    }
 }
 
-public abstract class ApiTestBase : IDisposable
+/// <summary>
+/// Один контейнер PostgreSQL на весь прогін тестів (Testcontainers). Схема створюється справжніми міграціями
+/// (<c>MigrateAsync</c>), а перед кожним тестом таблиці очищаються й наповнюються демо-даними з тими самими id.
+/// </summary>
+public sealed class PostgresFixture : IAsyncLifetime
 {
-    protected ApiFactory Factory { get; } = new();
-    protected HttpClient Client { get; }
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:18-alpine").Build();
 
-    protected ApiTestBase() => Client = Factory.CreateClient();
+    public string ConnectionString => _container.GetConnectionString();
 
-    public void Dispose()
+    public async Task InitializeAsync()
+    {
+        await _container.StartAsync();
+        await using var db = CreateDbContext();
+        await db.Database.MigrateAsync();
+    }
+
+    public async Task DisposeAsync() => await _container.DisposeAsync();
+
+    public AppDbContext CreateDbContext() =>
+        new(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(ConnectionString).Options);
+
+    public async Task ResetAsync()
+    {
+        await using var db = CreateDbContext();
+        await db.Database.ExecuteSqlRawAsync(
+            @"TRUNCATE TABLE ""Subscriptions"", ""SeasonalPrices"", ""Products"", ""Categories"" RESTART IDENTITY CASCADE");
+        await DemoData.SeedAsync(db);
+    }
+}
+
+[CollectionDefinition("Api")]
+public sealed class ApiCollection : ICollectionFixture<PostgresFixture>;
+
+public abstract class ApiTestBase(PostgresFixture fixture) : IAsyncLifetime
+{
+    protected PostgresFixture Postgres { get; } = fixture;
+    protected ApiFactory Factory { get; } = new(fixture.ConnectionString);
+    protected HttpClient Client { get; private set; } = null!;
+
+    public async Task InitializeAsync()
+    {
+        await Postgres.ResetAsync();
+        Client = Factory.CreateClient();
+    }
+
+    public Task DisposeAsync()
     {
         Client.Dispose();
         Factory.Dispose();
-        GC.SuppressFinalize(this);
+        return Task.CompletedTask;
     }
 }
 

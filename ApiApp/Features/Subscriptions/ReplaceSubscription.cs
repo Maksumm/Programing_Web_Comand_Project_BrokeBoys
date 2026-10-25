@@ -1,6 +1,7 @@
 using ApiApp.Common;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 
 namespace ApiApp.Features.Subscriptions;
 
@@ -14,7 +15,7 @@ internal static class ReplaceSubscription
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static Results<NoContent, ValidationProblem, ProblemHttpResult> Handle(int id, ReplaceSubscriptionRequest request, CatalogueStore store)
+    private static async Task<Results<NoContent, ValidationProblem, ProblemHttpResult>> Handle(int id, ReplaceSubscriptionRequest request, AppDbContext db, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .Email(nameof(request.Email), request.Email)
@@ -26,20 +27,33 @@ internal static class ReplaceSubscription
             return errors.ToResult();
         }
 
-        var result = store.ReplaceSubscription(id, request.Email!.Trim(), request.CategoryId!.Value, request.Threshold, request.IsActive!.Value);
-        if (result.Status == StoreStatus.NotFound)
+        var entity = await db.Subscriptions.FirstOrDefaultAsync(s => s.Id == id, ct);
+        if (entity is null)
         {
-            return Problems.NotFound(result.Detail!);
+            return Problems.NotFound($"Subscription {id} was not found.");
         }
 
-        if (result.Status == StoreStatus.InvalidReference)
+        var category = await db.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == request.CategoryId, ct);
+        if (category is null)
         {
-            return Problems.Invalid(result.Field!, result.Detail!);
+            return Problems.Invalid(nameof(request.CategoryId), "Category does not exist.");
         }
 
-        if (result.Status == StoreStatus.Conflict)
+        entity.Email = request.Email!.Trim().ToLowerInvariant();
+        entity.CategoryId = category.Id;
+        entity.Threshold = request.Threshold;
+        entity.IsActive = request.IsActive!.Value;
+        try
         {
-            return Problems.Conflict(result.Detail!);
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.UniqueViolation))
+        {
+            return Problems.Conflict("This e-mail is already subscribed to this category.");
+        }
+        catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.ForeignKeyViolation))
+        {
+            return Problems.Invalid("CategoryId", "Category does not exist.");
         }
 
         return TypedResults.NoContent();

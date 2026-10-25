@@ -1,6 +1,7 @@
 using ApiApp.Common;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 
 namespace ApiApp.Features.Prices;
 
@@ -14,7 +15,7 @@ internal static class ReplacePrice
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static Results<NoContent, ValidationProblem, ProblemHttpResult> Handle(int id, ReplacePriceRequest request, CatalogueStore store)
+    private static async Task<Results<NoContent, ValidationProblem, ProblemHttpResult>> Handle(int id, ReplacePriceRequest request, AppDbContext db, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .RequiredId(nameof(request.ProductId), request.ProductId)
@@ -25,20 +26,31 @@ internal static class ReplacePrice
             return errors.ToResult();
         }
 
-        var result = store.ReplacePrice(id, request.ProductId!.Value, request.Month!.Value, request.Price!.Value);
-        if (result.Status == StoreStatus.NotFound)
+        var entity = await db.SeasonalPrices.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (entity is null)
         {
-            return Problems.NotFound(result.Detail!);
+            return Problems.NotFound($"Price {id} was not found.");
         }
 
-        if (result.Status == StoreStatus.InvalidReference)
+        if (!await db.Products.AnyAsync(p => p.Id == request.ProductId, ct))
         {
-            return Problems.Invalid(result.Field!, result.Detail!);
+            return Problems.Invalid(nameof(request.ProductId), "Product does not exist.");
         }
 
-        if (result.Status == StoreStatus.Conflict)
+        entity.ProductId = request.ProductId!.Value;
+        entity.Month = request.Month!.Value;
+        entity.Price = request.Price!.Value;
+        try
         {
-            return Problems.Conflict(result.Detail!);
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.UniqueViolation))
+        {
+            return Problems.Conflict("This product already has a price for this month.");
+        }
+        catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.ForeignKeyViolation))
+        {
+            return Problems.Invalid("ProductId", "Product does not exist.");
         }
 
         return TypedResults.NoContent();

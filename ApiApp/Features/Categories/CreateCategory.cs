@@ -1,6 +1,7 @@
 using ApiApp.Common;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 
 namespace ApiApp.Features.Categories;
 
@@ -13,7 +14,7 @@ internal static class CreateCategory
             .WithName("CreateCategory")
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static Results<Created<CategoryResponse>, ValidationProblem, ProblemHttpResult> Handle(CreateCategoryRequest request, CatalogueStore store)
+    private static async Task<Results<Created<CategoryResponse>, ValidationProblem, ProblemHttpResult>> Handle(CreateCategoryRequest request, AppDbContext db, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .RequiredText(nameof(request.NameUk), request.NameUk)
@@ -25,13 +26,23 @@ internal static class CreateCategory
             return errors.ToResult();
         }
 
-        var result = store.AddCategory(request.NameUk!.Trim(), request.NameEn!.Trim(), request.DescriptionUk?.Trim() ?? string.Empty, request.DescriptionEn?.Trim() ?? string.Empty);
-        if (result.Status == StoreStatus.Conflict)
+        var entity = new Category
         {
-            return Problems.Conflict(result.Detail!);
+            NameUk = request.NameUk!.Trim(),
+            NameEn = request.NameEn!.Trim(),
+            DescriptionUk = request.DescriptionUk?.Trim() ?? string.Empty,
+            DescriptionEn = request.DescriptionEn?.Trim() ?? string.Empty
+        };
+        db.Categories.Add(entity);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.UniqueViolation))
+        {
+            return Problems.Conflict("A category with this name already exists.");
         }
 
-        var response = CategoryResponse.From(result.Value!);
-        return TypedResults.Created($"/api/categories/{response.Id}", response);
+        return TypedResults.Created($"/api/categories/{entity.Id}", CategoryResponse.From(entity, 0, 0));
     }
 }

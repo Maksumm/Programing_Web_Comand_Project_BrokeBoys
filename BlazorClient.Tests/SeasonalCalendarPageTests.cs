@@ -82,5 +82,45 @@ namespace BlazorClient.Tests
             cut.WaitForAssertion(() => Assert.Equal(12, cut.FindAll(MonthBar).Count), Timeout);
             Assert.Empty(cut.FindAll(".mud-progress-circular"));
         }
+
+        [Fact]
+        public async Task RealPrices_DriveBarHeights_AndHighlightCheapestMonth()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            var cheapest = DateTime.Today.Month == 7 ? 8 : 7; // поточний місяць має власний колір
+            var prices = Enumerable.Range(1, 12).Select(m => new SeasonalPrice
+            {
+                Id = m,
+                Name = "Дрова, дуб",
+                MonthNumber = m,
+                Month = m.ToString(),
+                Price = m == cheapest ? 40m : m == 12 ? 200m : 100m
+            }).ToList();
+            ctx.AddState<SeasonalPrice>().SetItems(prices);
+
+            var cut = ctx.Render<SeasonalCalendarPage>();
+
+            Assert.Equal(12, cut.FindAll(MonthBar).Count);
+            Assert.Contains("height: 150px", cut.Markup);   // найвища ціна (200)
+            Assert.Contains("height: 75px", cut.Markup);    // звичайна ціна (100) — половина найвищої
+            Assert.Contains("height: 30px", cut.Markup);    // найнижча ціна (40) — пропорційно
+            Assert.Single(cut.FindAll("[style*='background-color: #2D8A57']"));
+            Assert.Contains("Дрова, дуб", TestHelpers.Text(cut.Markup));
+        }
+
+        [Fact]
+        public async Task MonthsWithoutPrice_AreDrawnEmpty()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.AddState<SeasonalPrice>().SetItems(new List<SeasonalPrice>
+            {
+                new SeasonalPrice { Id = 1, Name = "Дрова, дуб", Price = 1500m, MonthNumber = 10, Month = "Жов" }
+            });
+
+            var cut = ctx.Render<SeasonalCalendarPage>();
+
+            Assert.Equal(12, cut.FindAll(MonthBar).Count);
+            Assert.Equal(11, cut.FindAll("[style*='height: 0px']").Count);
+        }
     }
 }

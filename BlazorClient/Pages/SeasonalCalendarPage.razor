@@ -8,6 +8,7 @@
 @using BlazorClient.Services
 @implements IDisposable
 @inject ListState<SeasonalPrice> Store
+@inject ICatalogueApi Api
 
 @if (Store.State == ViewState.Loading)
 {
@@ -54,8 +55,8 @@ else
 {
     <!-- Сторінка з даними -->
     <div class="mb-4">
-        <MudText Typo="Typo.caption" Style="color: #666;">@L["FirewoodOakSubtitle"]</MudText>
-        <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #1E3A2B;">@L["FirewoodOakTitle"]</MudText>
+        <MudText Typo="Typo.caption" Style="color: #666;">@L["Calendar"]</MudText>
+        <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #1E3A2B;">@Store.Items[0].Name</MudText>
     </div>
 
     <MudGrid>
@@ -66,12 +67,12 @@ else
                 <MudText Typo="Typo.caption" Class="mud-text-secondary mb-6 d-block">@L["PriceIndexNote"]</MudText>
 
                 <div class="d-flex justify-space-between align-end mt-8" style="height: 180px; padding: 0 10px;">
-                    @foreach (var m in _monthlyData)
+                    @foreach (var m in MonthlyData())
                     {
-                        <div class="d-flex flex-column align-center" style="width: 7%;" @key="m.Month">
-                            <MudText Typo="Typo.caption" Class="mb-1" Style="font-size: 10px;">@m.Value</MudText>
-                            <div style="width: 100%; height: @((m.Value * 1.2).ToString("0.##", CultureInfo.InvariantCulture))px; background-color: @(m.IsCurrent ? "#1E3A2B" : "#C8D6CE"); border-radius: 4px 4px 0 0;"></div>
-                            <MudText Typo="Typo.caption" Class="mt-2" Style="font-size: 11px; color: #666;">@m.Month</MudText>
+                        <div class="d-flex flex-column align-center" style="width: 7%;" @key="m.Number">
+                            <MudText Typo="Typo.caption" Class="mb-1" Style="font-size: 10px;">@m.Label</MudText>
+                            <div style="width: 100%; height: @(m.Height)px; background-color: @m.Color; border-radius: 4px 4px 0 0;"></div>
+                            <MudText Typo="Typo.caption" Class="mt-2" Style="font-size: 11px; color: #666;">@m.Name</MudText>
                         </div>
                     }
                 </div>
@@ -106,33 +107,49 @@ else
 }
 
 @code {
-    private record MonthValue(string Month, int Value, bool IsCurrent = false);
+    private static readonly string[] MonthKeys =
+        { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
-    private List<MonthValue> _monthlyData => new()
+    private const string CurrentColor = "#1E3A2B";
+    private const string CheapestColor = "#2D8A57";
+    private const string DefaultColor = "#C8D6CE";
+
+    private record MonthBar(int Number, string Name, string Label, int Height, string Color);
+
+    /// <summary>12 стовпчиків за цінами із сервера: висота пропорційна ціні, найдешевший місяць підсвічено, поточний — темний.</summary>
+    private List<MonthBar> MonthlyData()
     {
-        new(L["Month_Jan"], 118),
-        new(L["Month_Feb"], 112),
-        new(L["Month_Mar"], 104),
-        new(L["Month_Apr"], 95),
-        new(L["Month_May"], 88),
-        new(L["Month_Jun"], 84),
-        new(L["Month_Jul"], 80),
-        new(L["Month_Aug"], 86),
-        new(L["Month_Sep"], 94),
-        new(L["Month_Oct"], 108, true),
-        new(L["Month_Nov"], 122),
-        new(L["Month_Dec"], 130)
-    };
+        var byMonth = Store.Items
+            .Where(i => i.MonthNumber is >= 1 and <= 12)
+            .GroupBy(i => i.MonthNumber)
+            .ToDictionary(g => g.Key, g => g.First());
+        var max = byMonth.Count == 0 ? 0m : byMonth.Values.Max(i => i.Price);
+        var min = byMonth.Count == 0 ? 0m : byMonth.Values.Min(i => i.Price);
+        var current = DateTime.Today.Month;
+
+        return Enumerable.Range(1, 12).Select(number =>
+        {
+            var name = L["Month_" + MonthKeys[number - 1]].Value;
+            if (!byMonth.TryGetValue(number, out var item) || max <= 0)
+            {
+                return new MonthBar(number, name, "—", 0, DefaultColor);
+            }
+
+            var height = (int)Math.Round((double)(item.Price / max) * 150);
+            var color = number == current ? CurrentColor : item.Price == min ? CheapestColor : DefaultColor;
+            return new MonthBar(number, name, item.Price.ToString("0", CultureInfo.CurrentCulture), height, color);
+        }).ToList();
+    }
 
     protected override async Task OnInitializedAsync()
     {
         Store.Changed += OnStoreChanged;
-        await Store.EnsureLoadedAsync(() => SampleData.GetPricesAsync(L));
+        await Store.EnsureLoadedAsync(Api.GetCalendarAsync);
     }
 
     private void OnStoreChanged() => _ = InvokeAsync(StateHasChanged);
 
-    private Task Retry() => Store.ReloadAsync(() => SampleData.GetPricesAsync(L));
+    private Task Retry() => Store.ReloadAsync(Api.GetCalendarAsync);
 
     public void Dispose() => Store.Changed -= OnStoreChanged;
 }

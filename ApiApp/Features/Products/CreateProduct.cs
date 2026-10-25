@@ -1,6 +1,7 @@
 using ApiApp.Common;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 
 namespace ApiApp.Features.Products;
 
@@ -13,7 +14,7 @@ internal static class CreateProduct
             .WithName("CreateProduct")
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static Results<Created<ProductResponse>, ValidationProblem, ProblemHttpResult> Handle(CreateProductRequest request, CatalogueStore store)
+    private static async Task<Results<Created<ProductResponse>, ValidationProblem, ProblemHttpResult>> Handle(CreateProductRequest request, AppDbContext db, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .RequiredId(nameof(request.CategoryId), request.CategoryId)
@@ -24,18 +25,31 @@ internal static class CreateProduct
             return errors.ToResult();
         }
 
-        var result = store.AddProduct(request.CategoryId!.Value, request.NameUk!.Trim(), request.NameEn!.Trim());
-        if (result.Status == StoreStatus.InvalidReference)
+        if (!await db.Categories.AnyAsync(c => c.Id == request.CategoryId, ct))
         {
-            return Problems.Invalid(result.Field!, result.Detail!);
+            return Problems.Invalid(nameof(request.CategoryId), "Category does not exist.");
         }
 
-        if (result.Status == StoreStatus.Conflict)
+        var entity = new Product
         {
-            return Problems.Conflict(result.Detail!);
+            CategoryId = request.CategoryId!.Value,
+            NameUk = request.NameUk!.Trim(),
+            NameEn = request.NameEn!.Trim()
+        };
+        db.Products.Add(entity);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.UniqueViolation))
+        {
+            return Problems.Conflict("This category already has a product with this name.");
+        }
+        catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.ForeignKeyViolation))
+        {
+            return Problems.Invalid("CategoryId", "Category does not exist.");
         }
 
-        var response = ProductResponse.From(result.Value!);
-        return TypedResults.Created($"/api/products/{response.Id}", response);
+        return TypedResults.Created($"/api/products/{entity.Id}", ProductResponse.From(entity));
     }
 }

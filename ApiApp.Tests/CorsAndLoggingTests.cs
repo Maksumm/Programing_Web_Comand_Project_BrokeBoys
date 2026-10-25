@@ -5,7 +5,8 @@ using Microsoft.Extensions.Logging;
 
 namespace ApiApp.Tests;
 
-public class CorsAndLoggingTests
+[Collection("Api")]
+public class CorsAndLoggingTests(PostgresFixture fixture)
 {
     private const string ClientOrigin = "https://localhost:7223";
 
@@ -24,7 +25,8 @@ public class CorsAndLoggingTests
     [Fact]
     public async Task Cors_AllowsOnlyClientOrigin_AndExposesLocationHeader()
     {
-        using var factory = new ApiFactory();
+        await fixture.ResetAsync();
+        using var factory = new ApiFactory(fixture.ConnectionString);
         using var client = factory.CreateClient();
         var body = new { nameUk = "Інструмент", nameEn = "Tools" };
 
@@ -39,8 +41,9 @@ public class CorsAndLoggingTests
     [Fact]
     public async Task EveryRequest_IsLogged_WithMethodPathStatusAndDuration()
     {
+        await fixture.ResetAsync();
         var logs = new ListLoggerProvider();
-        using var factory = new ApiFactory().WithWebHostBuilder(b => b.ConfigureLogging(l => l.AddProvider(logs)));
+        using var factory = new ApiFactory(fixture.ConnectionString).WithWebHostBuilder(b => b.ConfigureLogging(l => l.AddProvider(logs)));
         using var client = factory.CreateClient();
 
         await client.GetAsync("/api/categories");

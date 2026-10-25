@@ -45,9 +45,9 @@ namespace BlazorClient.Tests
         }
 
         [Fact]
-        public void SampleDataSource_ContainsNoHardcodedUkrainianText()
+        public void CatalogueApiSource_ContainsNoHardcodedUkrainianText()
         {
-            var path = Path.Combine(FindRepoRoot(), "BlazorClient", "Services", "SampleData.cs");
+            var path = Path.Combine(FindRepoRoot(), "BlazorClient", "Services", "CatalogueApi.cs");
 
             Assert.False(HasHardcodedText(path));
         }

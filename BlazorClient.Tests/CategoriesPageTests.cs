@@ -96,6 +96,7 @@ namespace BlazorClient.Tests
         {
             await using var ctx = TestHelpers.CreateContext();
             ctx.AddState<Category>().SetError();
+            ctx.Services.GetRequiredService<FakeCatalogueApi>().Categories.AddRange(Sample());
 
             var cut = ctx.Render<CategoriesPage>();
             cut.Find("button").Click();

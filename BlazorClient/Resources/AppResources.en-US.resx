@@ -95,4 +95,11 @@
 	<data name="CategoryFirewoodDescription" xml:space="preserve"><value>Seasonal prices for firewood</value></data>
 	<data name="CategoryTiresDescription" xml:space="preserve"><value>Summer and winter tires</value></data>
 	<data name="CategoryMaterialsDescription" xml:space="preserve"><value>Bricks, cement, lumber</value></data>
+	<data name="ErrorApiUnavailable" xml:space="preserve"><value>The server is unavailable. Try again later.</value></data>
+	<data name="ErrorInvalidData" xml:space="preserve"><value>Please check the entered data.</value></data>
+	<data name="ErrorCategoryNotFound" xml:space="preserve"><value>Category not found. Enter a name from the Categories page.</value></data>
+	<data name="ErrorSubscriptionExists" xml:space="preserve"><value>This e-mail is already subscribed to this category.</value></data>
+	<data name="ErrorNotFound" xml:space="preserve"><value>The record was not found; it may already be deleted.</value></data>
+	<data name="ConfirmDeleteSubscription" xml:space="preserve"><value>Delete the subscription to “{0}”?</value></data>
+	<data name="DeleteLabel" xml:space="preserve"><value>Delete</value></data>
 </root>

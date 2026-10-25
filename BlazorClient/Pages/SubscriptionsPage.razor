@@ -2,6 +2,8 @@
 @using BlazorClient.Services
 @implements IDisposable
 @inject ListState<Subscription> Store
+@inject ICatalogueApi Api
+@inject IJSRuntime JS
 
 @switch (Store.State)
 {
@@ -47,7 +49,7 @@
                         foreach (var subscription in Store.Items)
                         {
                             <div @key="subscription.Id">
-                                <SubscriptionRow Subscription="subscription" OnToggled="OnToggled" />
+                                <SubscriptionRow Subscription="subscription" OnToggled="OnToggled" OnDeleted="OnDeleted" />
                                 <MudDivider />
                             </div>
                         }
@@ -71,6 +73,11 @@
                     </div>
                 </MudPaper>
 
+                @if (_errorKey is string errorKey)
+                {
+                    <MudAlert Severity="Severity.Error" Class="mb-4">@L[errorKey]</MudAlert>
+                }
+
                 <MudPaper Class="pa-6" Style="border-radius: 16px; background-color: white;" Elevation="0">
                     <MudText Typo="Typo.subtitle2" Class="fw-bold mb-2">@L["WhereToSendNotifications"]</MudText>
                     <SubscribeFormComponent OnSubmitted="AddSubscription" />
@@ -81,32 +88,68 @@
 }
 
 @code {
+    private string? _errorKey;
+
     private int ActiveCount => Store.Items.Count(s => s.IsActive);
 
     protected override async Task OnInitializedAsync()
     {
         Store.Changed += OnStoreChanged;
-        await Store.EnsureLoadedAsync(() => SampleData.GetSubscriptionsAsync(L));
+        await Store.EnsureLoadedAsync(Api.GetSubscriptionsAsync);
     }
 
     private void OnStoreChanged() => _ = InvokeAsync(StateHasChanged);
 
-    private Task Retry() => Store.ReloadAsync(() => SampleData.GetSubscriptionsAsync(L));
+    private Task Retry() => Store.ReloadAsync(Api.GetSubscriptionsAsync);
 
-    private void OnToggled(Subscription subscription) => Store.NotifyChanged();
-
-    private void AddSubscription(SubscribeFormModel form)
+    /// <summary>Перемикач уже змінив модель; якщо сервер відмовив — повертаємо значення назад і показуємо помилку.</summary>
+    private async Task OnToggled(Subscription subscription)
     {
-        var nextId = Store.Items.Count == 0 ? 1 : Store.Items.Max(s => s.Id) + 1;
-
-        Store.Add(new Subscription
+        _errorKey = null;
+        var result = await Api.SetSubscriptionActiveAsync(subscription, subscription.IsActive);
+        if (!result.Succeeded)
         {
-            Id = nextId,
-            Email = form.Email,
-            CategoryName = form.Category,
-            Threshold = form.Threshold,
-            IsActive = true
-        });
+            subscription.IsActive = !subscription.IsActive;
+            _errorKey = result.ErrorKey;
+        }
+
+        Store.NotifyChanged();
+    }
+
+    private async Task OnDeleted(Subscription subscription)
+    {
+        _errorKey = null;
+        var confirmed = await JS.InvokeAsync<bool>("confirm", L["ConfirmDeleteSubscription", subscription.CategoryName].Value);
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var result = await Api.DeleteSubscriptionAsync(subscription.Id);
+        if (result.Succeeded)
+        {
+            Store.SetItems(Store.Items.Where(s => s.Id != subscription.Id));
+        }
+        else
+        {
+            _errorKey = result.ErrorKey;
+            Store.NotifyChanged();
+        }
+    }
+
+    private async Task AddSubscription(SubscribeFormModel form)
+    {
+        _errorKey = null;
+        var result = await Api.CreateSubscriptionAsync(form);
+        if (result.Succeeded)
+        {
+            Store.Add(result.Value!);
+        }
+        else
+        {
+            _errorKey = result.ErrorKey;
+            Store.NotifyChanged();
+        }
     }
 
     public void Dispose() => Store.Changed -= OnStoreChanged;

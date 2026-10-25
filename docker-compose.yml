@@ -1,0 +1,21 @@
+# PostgreSQL для локальної розробки: docker compose up -d
+# Порт хоста 5433, щоб не конфліктувати з PostgreSQL, встановленим на комп'ютері (він зазвичай займає 5432).
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: catalogue
+    ports:
+      - "5433:5432"
+    volumes:
+      - catalogue-data:/var/lib/postgresql   # PostgreSQL 18+: каталог даних усередині /var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d catalogue"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  catalogue-data:
