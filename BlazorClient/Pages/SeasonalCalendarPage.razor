@@ -6,6 +6,7 @@
 @using BlazorClient.Resources
 @using System.Globalization
 @using BlazorClient.Services
+@attribute [Authorize]
 @implements IDisposable
 @inject ListState<SeasonalPrice> Store
 @inject ICatalogueApi Api

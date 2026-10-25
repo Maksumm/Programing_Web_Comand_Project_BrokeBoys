@@ -1,3 +1,5 @@
+using ApiApp.Common;
+
 namespace ApiApp.Features.Products;
 
 public static class ProductsEndpoints
@@ -5,7 +7,11 @@ public static class ProductsEndpoints
     /// <summary>Підключає всі endpoint-и можливості «Products» до Program.cs одним викликом.</summary>
     public static IEndpointRouteBuilder MapProducts(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("/api/products").WithTags("Products");
+        var group = routes.MapGroup("/api/products")
+            .WithTags("Products")
+            .RequireAuthorization(Policies.Read)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
 
         ListProducts.Map(group);
         GetProduct.Map(group);
