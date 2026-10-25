@@ -1,5 +1,6 @@
 @page "/categories"
 @using BlazorClient.Services
+@attribute [Authorize]
 @implements IDisposable
 @inject ListState<Category> Store
 @inject ICatalogueApi Api

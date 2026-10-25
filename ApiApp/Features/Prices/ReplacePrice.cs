@@ -12,6 +12,7 @@ internal static class ReplacePrice
     public static void Map(RouteGroupBuilder group) =>
         group.MapPut("/{id:int}", Handle)
             .WithName("ReplacePrice")
+            .RequireAuthorization(Policies.ManageCatalogue)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 

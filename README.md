@@ -56,6 +56,7 @@ Blazor WebAssembly + MudBlazor. Інтерфейс українською та �
 - Повторний `PUT` знову дає 204, повторний `DELETE` — 404.
 - Документ OpenAPI: `/openapi/v1.json` (лише в `Development`).
 - CORS дозволено лише для адреси клієнта (`Cors:ClientOrigin` в `appsettings.json`, за замовчуванням `https://localhost:7223`); заголовок `Location` відкрито для читання.
+- Усі endpoint-и захищені токеном Microsoft Entra ID: читання вимагає scope `access_as_user`, зміна каталогу — ще й роль `Admin`, підписки — роль `Subscriber`; без токена 401, без прав 403. Таблиця — `docs/endpoints-security.md`, налаштування порталу — `docs/entra-setup.md`; `GET /api/me` повертає ім'я, пошту й ролі користувача.
 - Кожен запит логується: метод, шлях, код і тривалість у мс (`RequestLoggingMiddleware`).
 
 Перший запуск бази (потрібен Docker і `dotnet-ef`):

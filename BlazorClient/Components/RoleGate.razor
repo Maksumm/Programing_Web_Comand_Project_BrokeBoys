@@ -1,0 +1,30 @@
+@inject CurrentUserState User
+
+@if (_loading)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="mt-8" />
+}
+else if (_allowed)
+{
+    @ChildContent
+}
+else
+{
+    <MudAlert Severity="Severity.Warning" Class="mt-4">@L["RoleRequired", Role]</MudAlert>
+}
+
+@code {
+    /// <summary>Роль, потрібна для вмісту (наприклад, «Subscriber»). Сервер усе одно перевіряє її сам: ця перевірка лише ховає недоступне.</summary>
+    [Parameter, EditorRequired] public string Role { get; set; } = string.Empty;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _loading = true;
+    private bool _allowed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _allowed = await User.IsInRoleAsync(Role);
+        _loading = false;
+    }
+}

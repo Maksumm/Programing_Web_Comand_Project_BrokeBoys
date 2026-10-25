@@ -10,6 +10,7 @@ internal static class DeletePrice
     public static void Map(RouteGroupBuilder group) =>
         group.MapDelete("/{id:int}", Handle)
             .WithName("DeletePrice")
+            .RequireAuthorization(Policies.ManageCatalogue)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
     private static async Task<Results<NoContent, ProblemHttpResult>> Handle(int id, AppDbContext db, CancellationToken ct)

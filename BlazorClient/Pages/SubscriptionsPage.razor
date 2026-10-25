@@ -1,10 +1,12 @@
 @page "/subscriptions"
 @using BlazorClient.Services
+@attribute [Authorize]
 @implements IDisposable
 @inject ListState<Subscription> Store
 @inject ICatalogueApi Api
 @inject IJSRuntime JS
 
+<RoleGate Role="Subscriber">
 @switch (Store.State)
 {
     case ViewState.Loading:
@@ -86,6 +88,7 @@
         </MudGrid>
         break;
 }
+</RoleGate>
 
 @code {
     private string? _errorKey;

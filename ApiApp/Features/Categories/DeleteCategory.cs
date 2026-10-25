@@ -10,6 +10,7 @@ internal static class DeleteCategory
     public static void Map(RouteGroupBuilder group) =>
         group.MapDelete("/{id:int}", Handle)
             .WithName("DeleteCategory")
+            .RequireAuthorization(Policies.ManageCatalogue)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 

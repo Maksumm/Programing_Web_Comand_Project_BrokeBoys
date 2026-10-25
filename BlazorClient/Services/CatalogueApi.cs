@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using BlazorClient.Models;
 using BlazorClient.Resources;
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.Extensions.Localization;
 
 namespace BlazorClient.Services
@@ -67,6 +68,18 @@ namespace BlazorClient.Services
                 }).ToList();
         }
 
+        public async Task<UserInfo?> GetCurrentUserAsync()
+        {
+            try
+            {
+                return await _http.GetFromJsonAsync<UserInfo>("api/me");
+            }
+            catch (Exception ex) when (ex is HttpRequestException or AccessTokenNotAvailableException)
+            {
+                return null;
+            }
+        }
+
         public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync()
         {
             var categories = (await GetAsync<CategoryDto[]>("api/categories")).ToDictionary(c => c.Id);
@@ -101,6 +114,10 @@ namespace BlazorClient.Services
                     ?? throw new InvalidOperationException("Empty response after creating a subscription.");
                 return ApiResult<Subscription>.Ok(ToModel(dto, categories.ToDictionary(c => c.Id)));
             }
+            catch (AccessTokenNotAvailableException)
+            {
+                return ApiResult<Subscription>.Fail("ErrorSignInRequired");
+            }
             catch (HttpRequestException)
             {
                 return ApiResult<Subscription>.Fail("ErrorApiUnavailable");
@@ -120,6 +137,10 @@ namespace BlazorClient.Services
                 });
                 return response.StatusCode == HttpStatusCode.NoContent ? ApiResult.Ok() : ApiResult.Fail(ErrorKey(response.StatusCode));
             }
+            catch (AccessTokenNotAvailableException)
+            {
+                return ApiResult.Fail("ErrorSignInRequired");
+            }
             catch (HttpRequestException)
             {
                 return ApiResult.Fail("ErrorApiUnavailable");
@@ -133,6 +154,10 @@ namespace BlazorClient.Services
                 var response = await _http.DeleteAsync($"api/subscriptions/{id}");
                 return response.StatusCode == HttpStatusCode.NoContent ? ApiResult.Ok() : ApiResult.Fail(ErrorKey(response.StatusCode));
             }
+            catch (AccessTokenNotAvailableException)
+            {
+                return ApiResult.Fail("ErrorSignInRequired");
+            }
             catch (HttpRequestException)
             {
                 return ApiResult.Fail("ErrorApiUnavailable");
@@ -142,6 +167,8 @@ namespace BlazorClient.Services
         private static string ErrorKey(HttpStatusCode status) => status switch
         {
             HttpStatusCode.BadRequest => "ErrorInvalidData",
+            HttpStatusCode.Unauthorized => "ErrorSignInRequired",
+            HttpStatusCode.Forbidden => "ErrorForbidden",
             HttpStatusCode.NotFound => "ErrorNotFound",
             HttpStatusCode.Conflict => "ErrorSubscriptionExists",
             _ => "ErrorApiUnavailable"
