@@ -22,6 +22,17 @@ namespace BlazorClient.Tests
 
         public List<Subscription> Subscriptions { get; } = new();
 
+        /// <summary>Користувач, якого «сервер» повертає для /api/me (за замовчуванням — з обома ролями).</summary>
+        public UserInfo? CurrentUser { get; set; } = new("Test User", "tester@example.com", new[] { "Admin", "Subscriber" });
+
+        public int CurrentUserRequests { get; private set; }
+
+        public Task<UserInfo?> GetCurrentUserAsync()
+        {
+            CurrentUserRequests++;
+            return Task.FromResult(CurrentUser);
+        }
+
         public Task<IEnumerable<Category>> GetCategoriesAsync() =>
             Task.FromResult<IEnumerable<Category>>(Categories.ToList());
 

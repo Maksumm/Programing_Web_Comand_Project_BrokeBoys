@@ -205,5 +205,55 @@ namespace BlazorClient.Tests
             Assert.Equal("ErrorNotFound", missing.ErrorKey);
             Assert.All(handler.Requests, r => Assert.Equal(HttpMethod.Delete, r.Method));
         }
+
+        [Fact]
+        public async Task GetCurrentUser_MapsNameEmailAndRoles()
+        {
+            var (api, handler, lease) = Create(_ => Json(new { name = "Олена", email = "olena@example.com", roles = new[] { "Admin" } }));
+            await using var leaseScope = lease;
+
+            var user = await api.GetCurrentUserAsync();
+
+            Assert.NotNull(user);
+            Assert.Equal("Олена", user.Name);
+            Assert.Equal("olena@example.com", user.Email);
+            Assert.Equal(new[] { "Admin" }, user.Roles);
+            Assert.Equal("/api/me", handler.Requests.Single().Path);
+        }
+
+        [Theory]
+        [InlineData(HttpStatusCode.Unauthorized)]
+        [InlineData(HttpStatusCode.Forbidden)]
+        [InlineData(HttpStatusCode.InternalServerError)]
+        public async Task GetCurrentUser_ReturnsNull_WhenServerRefuses(HttpStatusCode status)
+        {
+            var (api, _, lease) = Create(_ => new HttpResponseMessage(status));
+            await using var leaseScope = lease;
+
+            Assert.Null(await api.GetCurrentUserAsync());
+        }
+
+        [Fact]
+        public async Task GetCurrentUser_ReturnsNull_WhenServerIsDown()
+        {
+            var (api, _, lease) = Create(_ => throw new HttpRequestException("offline"));
+            await using var leaseScope = lease;
+
+            Assert.Null(await api.GetCurrentUserAsync());
+        }
+
+        [Theory]
+        [InlineData(HttpStatusCode.Unauthorized, "ErrorSignInRequired")]
+        [InlineData(HttpStatusCode.Forbidden, "ErrorForbidden")]
+        public async Task Writes_MapAuthorizationFailuresToMessageKeys(HttpStatusCode status, string key)
+        {
+            var (api, _, lease) = Create(_ => new HttpResponseMessage(status));
+            await using var leaseScope = lease;
+
+            var result = await api.DeleteSubscriptionAsync(1);
+
+            Assert.False(result.Succeeded);
+            Assert.Equal(key, result.ErrorKey);
+        }
     }
 }
