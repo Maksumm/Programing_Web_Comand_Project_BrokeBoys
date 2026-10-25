@@ -27,7 +27,7 @@ public class CorsAndLoggingTests(PostgresFixture fixture)
     {
         await fixture.ResetAsync();
         using var factory = new ApiFactory(fixture.ConnectionString);
-        using var client = factory.CreateClient();
+        using var client = factory.CreateClientWithToken();
         var body = new { nameUk = "Інструмент", nameEn = "Tools" };
 
         var allowed = await SendWithOriginAsync(client, HttpMethod.Post, "/api/categories", ClientOrigin, body);
@@ -45,6 +45,7 @@ public class CorsAndLoggingTests(PostgresFixture fixture)
         var logs = new ListLoggerProvider();
         using var factory = new ApiFactory(fixture.ConnectionString).WithWebHostBuilder(b => b.ConfigureLogging(l => l.AddProvider(logs)));
         using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", TestTokens.Create(roles: [TestTokens.AdminRole]));
 
         await client.GetAsync("/api/categories");
         await client.GetAsync("/api/categories/999");
