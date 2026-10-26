@@ -193,7 +193,9 @@ namespace BlazorClient.Tests
 
             cut.WaitForAssertion(() => Assert.Single(state.Items), Timeout);
             Assert.Equal(new[] { 1 }, api.DeletedIds);
-            Assert.DoesNotContain("Дрова", TestHelpers.Text(cut.Markup));
+            // Перевіряємо email рядка, а не назву категорії: у дефолтній (українській) культурі на Linux-runner
+            // «Дрова» є і в статичному тексті сторінки (NextNotificationText), тож перевірка за назвою залежала від культури.
+            Assert.DoesNotContain("a@example.com", TestHelpers.Text(cut.Markup));
         }
 
         [Fact]
