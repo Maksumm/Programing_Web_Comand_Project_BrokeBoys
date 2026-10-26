@@ -52,6 +52,7 @@ jobs:
 
       # Без збереженого пароля: GitHub видає короткочасний токен, Entra ID довіряє йому за federated credential.
       - name: Sign in to Azure (OpenID Connect)
+        id: azure_login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -71,8 +72,8 @@ jobs:
           RUNNER_IP=$(curl -s https://api.ipify.org)
           az postgres flexible-server firewall-rule create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ vars.AZURE_POSTGRES_SERVER }}" \
-            --rule-name "github-runner" \
+            --server-name "${{ vars.AZURE_POSTGRES_SERVER }}" \
+            --name "github-runner" \
             --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP"
 
       - name: Apply migrations
@@ -81,12 +82,12 @@ jobs:
         run: ./efbundle --connection "$CONNECTION"
 
       - name: Close the PostgreSQL firewall rule
-        if: always()
+        if: ${{ always() && steps.azure_login.outcome == 'success' }}
         run: |
           az postgres flexible-server firewall-rule delete \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ vars.AZURE_POSTGRES_SERVER }}" \
-            --rule-name "github-runner" --yes
+            --server-name "${{ vars.AZURE_POSTGRES_SERVER }}" \
+            --name "github-runner" --yes
 
       - name: Publish API
         run: dotnet publish ApiApp --configuration Release --output publish
