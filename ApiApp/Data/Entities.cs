@@ -42,7 +42,10 @@ public sealed class Subscription
 {
     public int Id { get; set; }
 
-    /// <summary>Завжди в нижньому регістрі, щоб унікальність «e-mail + категорія» не залежала від регістру.</summary>
+    /// <summary>Хто володіє підпискою: ідентифікатор користувача (<c>oid</c> з токена Entra ID). Кожен бачить і змінює лише свої.</summary>
+    public string OwnerId { get; set; } = string.Empty;
+
+    /// <summary>Куди надсилати сповіщення; завжди в нижньому регістрі. Не є ключем: пошту можна змінити.</summary>
     public string Email { get; set; } = string.Empty;
 
     public int CategoryId { get; set; }

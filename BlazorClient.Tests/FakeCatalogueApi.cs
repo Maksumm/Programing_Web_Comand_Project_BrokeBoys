@@ -20,6 +20,14 @@ namespace BlazorClient.Tests
 
         public List<SeasonalPrice> Prices { get; } = new();
 
+        public List<ProductOption> Products { get; } = new();
+
+        /// <summary>Ідентифікатори товарів, для яких сторінка просила ціни.</summary>
+        public List<int> RequestedProductIds { get; } = new();
+
+        /// <summary>Підписки, створені через <see cref="SubscribeToCategoryAsync"/>.</summary>
+        public List<(int CategoryId, string Email, decimal? Threshold)> CategorySubscriptions { get; } = new();
+
         public List<Subscription> Subscriptions { get; } = new();
 
         /// <summary>Користувач, якого «сервер» повертає для /api/me (за замовчуванням — з обома ролями).</summary>
@@ -38,6 +46,27 @@ namespace BlazorClient.Tests
 
         public Task<IEnumerable<SeasonalPrice>> GetCalendarAsync() =>
             Task.FromResult<IEnumerable<SeasonalPrice>>(Prices.ToList());
+
+        public Task<IEnumerable<SeasonalPrice>> GetCalendarAsync(int productId)
+        {
+            RequestedProductIds.Add(productId);
+            return Task.FromResult<IEnumerable<SeasonalPrice>>(Prices.Where(p => p.ProductId == productId).ToList());
+        }
+
+        public Task<IEnumerable<ProductOption>> GetProductsAsync() =>
+            Task.FromResult<IEnumerable<ProductOption>>(Products.ToList());
+
+        public Task<ApiResult<Subscription>> SubscribeToCategoryAsync(int categoryId, string email, decimal? threshold = null)
+        {
+            if (FailWrites)
+            {
+                return Task.FromResult(ApiResult<Subscription>.Fail("ErrorSubscriptionExists"));
+            }
+
+            CategorySubscriptions.Add((categoryId, email, threshold));
+            var created = new Subscription { Id = ++_nextId, Email = email, CategoryId = categoryId, Threshold = threshold, IsActive = true };
+            return Task.FromResult(ApiResult<Subscription>.Ok(created));
+        }
 
         public Task<IEnumerable<Subscription>> GetSubscriptionsAsync() =>
             Task.FromResult<IEnumerable<Subscription>>(Subscriptions.ToList());

@@ -22,7 +22,8 @@ namespace BlazorClient.Tests
             var cut = ctx.Render<SubscribeFormComponent>();
 
             Assert.NotNull(cut.Find("form"));
-            Assert.Equal(3, cut.FindAll("input").Count);
+            Assert.Equal(2, cut.FindAll("input").Count);
+            Assert.NotNull(cut.Find("select"));
             Assert.NotNull(cut.Find("button[type=submit]"));
         }
 
@@ -76,9 +77,9 @@ namespace BlazorClient.Tests
 
             await cut.Find("form").SubmitAsync();
 
-            // Повідомлення під кожним обов'язковим полем: Email і Category.
-            var errors = cut.FindAll(".mud-input-helper-text.mud-input-error");
-            Assert.Equal(2, errors.Count);
+            // Повідомлення під кожним обов'язковим полем: Email (MudTextField) і Category (список).
+            Assert.Single(cut.FindAll(".mud-input-helper-text.mud-input-error"));
+            Assert.Single(cut.FindAll(".validation-message"));
 
             // Некоректна форма не повинна викликати OnSubmitted.
             Assert.False(submitted);
@@ -94,12 +95,13 @@ namespace BlazorClient.Tests
             SubscribeFormModel? received = null;
 
             var cut = ctx.Render<SubscribeFormComponent>(p => p
+                .Add(c => c.Categories, new List<Category> { new() { Id = 1, Name = "Овочі" } })
                 .Add(c => c.OnSubmitted, EventCallback.Factory.Create<SubscribeFormModel>(
                     this, (SubscribeFormModel m) => { received = m; })));
 
             cut.FindAll("input")[0].Input("user@example.com");
-            cut.FindAll("input")[1].Input("Овочі");
-            cut.FindAll("input")[2].Input(typed);
+            cut.Find("select").Change("Овочі");
+            cut.FindAll("input")[1].Input(typed);
 
             await cut.Find("form").SubmitAsync();
 
@@ -107,6 +109,85 @@ namespace BlazorClient.Tests
             Assert.Equal(3.5m, received!.Threshold);
             Assert.Equal("user@example.com", received.Email);
             Assert.Equal("Овочі", received.Category);
+        }
+
+        [Fact]
+        public async Task CategoryDropdown_ListsTheGivenCategories_WithAPlaceholderFirst()
+        {
+            await using var ctx = CreateContext();
+
+            var cut = ctx.Render<SubscribeFormComponent>(p => p
+                .Add(c => c.Categories, new List<Category>
+                {
+                    new() { Id = 1, Name = "Дрова" },
+                    new() { Id = 2, Name = "Шини" }
+                }));
+
+            var options = cut.FindAll("select option");
+            Assert.Equal(3, options.Count);
+            Assert.Equal(string.Empty, options[0].GetAttribute("value"));
+            Assert.Equal("Дрова", options[1].GetAttribute("value"));
+            Assert.Equal("Шини", options[2].GetAttribute("value"));
+        }
+
+        [Fact]
+        public async Task InitialCategory_IsPreselected_WhenItExists()
+        {
+            await using var ctx = CreateContext();
+
+            var cut = ctx.Render<SubscribeFormComponent>(p => p
+                .Add(c => c.Categories, new List<Category> { new() { Id = 1, Name = "Дрова" }, new() { Id = 2, Name = "Шини" } })
+                .Add(c => c.InitialCategory, "Шини"));
+
+            Assert.Equal("Шини", cut.Find("select").SelectedValue());
+        }
+
+        [Fact]
+        public async Task SubmittingWithoutChoosingACategory_DoesNotSubmit()
+        {
+            await using var ctx = CreateContext();
+            var submitted = false;
+
+            var cut = ctx.Render<SubscribeFormComponent>(p => p
+                .Add(c => c.Categories, new List<Category> { new() { Id = 1, Name = "Дрова" } })
+                .Add(c => c.OnSubmitted, EventCallback.Factory.Create<SubscribeFormModel>(
+                    this, (SubscribeFormModel _) => { submitted = true; })));
+
+            cut.FindAll("input")[0].Input("user@example.com");
+            await cut.Find("form").SubmitAsync();
+
+            Assert.False(submitted);
+            Assert.Single(cut.FindAll(".validation-message"));
+        }
+
+        [Fact]
+        public async Task InitialEmail_FillsTheEmailField()
+        {
+            await using var ctx = CreateContext();
+
+            var cut = ctx.Render<SubscribeFormComponent>(p => p.Add(c => c.InitialEmail, "me@example.com"));
+
+            Assert.Equal("me@example.com", cut.FindAll("input")[0].GetAttribute("value"));
+        }
+
+        [Fact]
+        public async Task AfterASuccessfulSubmit_TheEmailGoesBackToTheInitialOne()
+        {
+            await using var ctx = CreateContext();
+            SubscribeFormModel? received = null;
+
+            var cut = ctx.Render<SubscribeFormComponent>(p => p
+                .Add(c => c.Categories, new List<Category> { new() { Id = 1, Name = "Дрова" } })
+                .Add(c => c.InitialEmail, "me@example.com")
+                .Add(c => c.OnSubmitted, EventCallback.Factory.Create<SubscribeFormModel>(
+                    this, (SubscribeFormModel m) => { received = m; })));
+
+            cut.FindAll("input")[0].Input("work@example.com");
+            cut.Find("select").Change("Дрова");
+            await cut.Find("form").SubmitAsync();
+
+            Assert.Equal("work@example.com", received?.Email);
+            Assert.Equal("me@example.com", cut.FindAll("input")[0].GetAttribute("value"));
         }
     }
 }

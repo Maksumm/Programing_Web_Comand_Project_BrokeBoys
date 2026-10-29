@@ -142,6 +142,11 @@ namespace ApiApp.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<decimal?>("Threshold")
                         .HasPrecision(7, 2)
                         .HasColumnType("numeric(7,2)");
@@ -150,7 +155,7 @@ namespace ApiApp.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.HasIndex("Email", "CategoryId")
+                    b.HasIndex("OwnerId", "CategoryId")
                         .IsUnique();
 
                     b.ToTable("Subscriptions", t =>

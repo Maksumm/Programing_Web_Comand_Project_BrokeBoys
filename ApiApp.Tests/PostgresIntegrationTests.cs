@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using ApiApp.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql;
 
 namespace ApiApp.Tests;
@@ -89,7 +91,7 @@ public class PostgresIntegrationTests(PostgresFixture fixture) : ApiTestBase(fix
         Assert.Equal("23505", SqlError(price)?.SqlState);
 
         await using var db3 = Postgres.CreateDbContext();
-        db3.Subscriptions.Add(new Subscription { Email = "user@example.com", CategoryId = 1 });
+        db3.Subscriptions.Add(new Subscription { OwnerId = TestTokens.OwnerId, Email = "someone-else@example.com", CategoryId = 1 });
         var subscription = await Assert.ThrowsAsync<DbUpdateException>(() => db3.SaveChangesAsync());
         Assert.Equal("23505", SqlError(subscription)?.SqlState);
     }
@@ -117,10 +119,45 @@ public class PostgresIntegrationTests(PostgresFixture fixture) : ApiTestBase(fix
     }
 
     [Fact]
-    public async Task EmailsAreStoredInLowerCase_SoDuplicatesDifferingByCaseConflict()
+    public async Task EmailsAreStoredInLowerCase()
     {
-        var response = await Client.PostAsJsonAsync("/api/subscriptions", new { email = "USER@Example.com", categoryId = 1 });
+        var created = await Client.PostAsJsonAsync("/api/subscriptions", new { email = "NEW.User@Example.com", categoryId = 3 });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
 
-        await response.AssertProblemAsync(HttpStatusCode.Conflict);
+        await using var db = Postgres.CreateDbContext();
+        Assert.Equal("new.user@example.com", await db.Subscriptions.Where(s => s.CategoryId == 3).Select(s => s.Email).SingleAsync());
+    }
+
+    /// <summary>
+    /// Друга міграція на базі з даними: підписки, створені до власника, отримують різні «legacy-…», тож унікальний індекс
+    /// (OwnerId, CategoryId) створюється, навіть якщо в одній категорії було кілька різних пошт.
+    /// </summary>
+    [Fact]
+    public async Task SecondMigration_GivesPreExistingSubscriptionsDistinctLegacyOwners()
+    {
+        var database = $"legacy_{Guid.NewGuid():N}";
+        await using (var admin = Postgres.CreateDbContext())
+        {
+            await admin.Database.ExecuteSqlRawAsync($"CREATE DATABASE \"{database}\"");
+        }
+
+        var connectionString = new NpgsqlConnectionStringBuilder(Postgres.ConnectionString) { Database = database, Pooling = false }.ConnectionString;
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(connectionString).Options);
+
+        // the schema as it was before ownership existed
+        await db.GetService<IMigrator>().MigrateAsync("20261024234118_InitialCreate");
+        await db.Database.ExecuteSqlRawAsync(
+            "INSERT INTO \"Categories\" (\"NameUk\", \"NameEn\", \"DescriptionUk\", \"DescriptionEn\") VALUES ('К', 'C', 'О', 'D')");
+        await db.Database.ExecuteSqlRawAsync(
+            "INSERT INTO \"Subscriptions\" (\"Email\", \"CategoryId\", \"IsActive\") SELECT 'a@example.com', \"Id\", true FROM \"Categories\"");
+        await db.Database.ExecuteSqlRawAsync(
+            "INSERT INTO \"Subscriptions\" (\"Email\", \"CategoryId\", \"IsActive\") SELECT 'b@example.com', \"Id\", true FROM \"Categories\"");
+
+        await db.Database.MigrateAsync();
+
+        var owners = await db.Subscriptions.OrderBy(s => s.Id).Select(s => s.OwnerId).ToListAsync();
+        Assert.Equal(2, owners.Count);
+        Assert.Equal(2, owners.Distinct().Count());
+        Assert.All(owners, owner => Assert.StartsWith("legacy-", owner));
     }
 }

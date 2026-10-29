@@ -1,0 +1,12 @@
+@inject CurrentUserState User
+
+@if (_isAdmin)
+{
+    <NavLink href="admin" class="nav-link-custom">@L["AdminTitle"]</NavLink>
+}
+
+@code {
+    private bool _isAdmin;
+
+    protected override async Task OnInitializedAsync() => _isAdmin = await User.IsInRoleAsync("Admin");
+}

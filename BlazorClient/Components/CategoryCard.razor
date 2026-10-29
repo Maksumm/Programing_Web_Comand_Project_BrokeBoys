@@ -1,17 +1,20 @@
-<MudCard Elevation="@(IsSelected ? 8 : 3)">
-    <MudCardHeader>
-        <CardHeaderContent>
-            <MudText Typo="Typo.h6">@Category.Name</MudText>
-        </CardHeaderContent>
-    </MudCardHeader>
+<MudCard Elevation="0" Style="@CardStyle">
     <MudCardContent>
-        <MudText Typo="Typo.body2" Class="mb-2">@Category.Description</MudText>
-        <MudChip T="string" Color="Color.Info" Size="Size.Small">
-            @L["TariffsLabel"]: @Category.SubscriptionsCount
-        </MudChip>
+        <MudText Typo="Typo.h6" Class="fw-bold" Style="color: #1E3A2B;">@Category.Name</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">@Category.Description</MudText>
+        <div class="d-flex gap-2 flex-wrap">
+            <MudChip T="string" Size="Size.Small" Style="background-color: #D1E2D9; color: #1E3A2B;">
+                @L["ProductsLabel"]: @Category.ProductsCount
+            </MudChip>
+            <MudChip T="string" Size="Size.Small" Style="background-color: #EAECE9; color: #1E3A2B;">
+                @L["SubscriptionsLabel"]: @Category.SubscriptionsCount
+            </MudChip>
+        </div>
     </MudCardContent>
-    <MudCardActions>
-        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="Select">@L["Subscribe"]</MudButton>
+    <MudCardActions Class="px-4 pb-4">
+        <MudButton Variant="Variant.Filled"
+                   Style="background-color: #1E3A2B; color: white; border-radius: 20px; text-transform: none;"
+                   OnClick="Select">@L["Subscribe"]</MudButton>
     </MudCardActions>
 </MudCard>
 
@@ -22,6 +25,10 @@
 
     /// <summary>Викликається, коли користувач натискає «Підписатися» на картці.</summary>
     [Parameter] public EventCallback<Category> OnSelected { get; set; }
+
+    private string CardStyle => IsSelected
+        ? "border-radius: 16px; background-color: white; height: 100%; outline: 2px solid #1E3A2B;"
+        : "border-radius: 16px; background-color: white; height: 100%;";
 
     private Task Select() => OnSelected.InvokeAsync(Category);
 }

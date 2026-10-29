@@ -82,7 +82,7 @@ public sealed class PostgresFixture : IAsyncLifetime
         await using var db = CreateDbContext();
         await db.Database.ExecuteSqlRawAsync(
             @"TRUNCATE TABLE ""Subscriptions"", ""SeasonalPrices"", ""Products"", ""Categories"" RESTART IDENTITY CASCADE");
-        await DemoData.SeedAsync(db);
+        await DemoData.SeedAsync(db, TestTokens.OwnerId);
     }
 }
 

@@ -1,0 +1,205 @@
+@inject IAdminApi Admin
+@inject IJSRuntime JS
+
+@if (_loading)
+{
+    <StateCard Loading="true" Title="@L["AdminLoading"]" />
+}
+else if (_loadError is not null)
+{
+    <StateCard CssClass="error-state"
+               Icon="@Icons.Material.Filled.PriorityHigh"
+               Title="@L["FailedToLoadData"]"
+               Message="@L["CheckInternetAndTryAgain"]"
+               ErrorKey="@_loadError.Key"
+               ErrorStatus="@_loadError.Status"
+               ActionText="@L["TryAgain"]"
+               OnAction="LoadAsync" />
+}
+else
+{
+    <MudPaper Class="pa-6 mb-4" Style="border-radius: 16px; background-color: white;" Elevation="0">
+        <MudText Typo="Typo.subtitle1" Class="fw-bold mb-3">@(_editingId is null ? L["AdminAddCategory"] : L["AdminEditCategory"])</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" Label="@L["NameUkLabel"]" @bind-Value="_nameUk" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" Label="@L["NameEnLabel"]" @bind-Value="_nameEn" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" Label="@L["DescriptionUkLabel"]" @bind-Value="_descriptionUk" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" Label="@L["DescriptionEnLabel"]" @bind-Value="_descriptionEn" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+        </MudGrid>
+
+        @if (_messageKey is string messageKey)
+        {
+            <MudAlert Severity="@(_messageIsError ? Severity.Error : Severity.Success)" Class="mt-3">@L[messageKey]</MudAlert>
+        }
+
+        <div class="d-flex gap-2 mt-3">
+            <MudButton id="category-save" Variant="Variant.Filled" OnClick="SaveAsync" Style="background-color: #1E3A2B; color: white; border-radius: 20px; text-transform: none;">@L["Save"]</MudButton>
+            @if (_editingId is not null)
+            {
+                <MudButton id="category-cancel" Variant="Variant.Text" OnClick="CancelEdit" Style="text-transform: none;">@L["AdminCancel"]</MudButton>
+            }
+        </div>
+    </MudPaper>
+
+    <MudPaper Class="pa-6" Style="border-radius: 16px; background-color: white;" Elevation="0">
+        @if (_items.Count == 0)
+        {
+            <div class="empty-state">@L["AdminNothingYet"]</div>
+        }
+        else
+        {
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>@L["NameUkLabel"]</th>
+                        <th>@L["NameEnLabel"]</th>
+                        <th>@L["ProductsLabel"]</th>
+                        <th>@L["SubscriptionsLabel"]</th>
+                        <th>@L["AdminActions"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _items)
+                    {
+                        <tr @key="item.Id">
+                            <td>@item.NameUk</td>
+                            <td>@item.NameEn</td>
+                            <td>@item.ProductsCount</td>
+                            <td>@item.SubscriptionsCount</td>
+                            <td>
+                                <button type="button" class="admin-action" data-action="edit" @onclick="() => StartEdit(item)">@L["AdminEdit"]</button>
+                                <button type="button" class="admin-action admin-action-danger" data-action="delete" @onclick="() => DeleteAsync(item)">@L["DeleteLabel"]</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </MudPaper>
+}
+
+@code {
+    private bool _loading = true;
+    private ApiErrors.Failure? _loadError;
+    private List<AdminCategory> _items = new();
+    private int? _editingId;
+    private string _nameUk = string.Empty;
+    private string _nameEn = string.Empty;
+    private string _descriptionUk = string.Empty;
+    private string _descriptionEn = string.Empty;
+    private string? _messageKey;
+    private bool _messageIsError;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _loadError = null;
+        try
+        {
+            _items = (await Admin.GetCategoriesAsync()).ToList();
+        }
+        catch (Exception exception)
+        {
+            _loadError = ApiErrors.Describe(exception);
+        }
+
+        _loading = false;
+    }
+
+    /// <summary>Тихе оновлення списку після запису: форма й повідомлення лишаються на місці.</summary>
+    private async Task RefreshAsync()
+    {
+        try
+        {
+            _items = (await Admin.GetCategoriesAsync()).ToList();
+        }
+        catch (Exception)
+        {
+            // the write already succeeded; the list is refreshed on the next load
+        }
+    }
+
+    private void StartEdit(AdminCategory item)
+    {
+        _editingId = item.Id;
+        _nameUk = item.NameUk;
+        _nameEn = item.NameEn;
+        _descriptionUk = item.DescriptionUk;
+        _descriptionEn = item.DescriptionEn;
+        _messageKey = null;
+    }
+
+    private void CancelEdit()
+    {
+        ResetForm();
+        _messageKey = null;
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _nameUk = _nameEn = _descriptionUk = _descriptionEn = string.Empty;
+    }
+
+    private static bool Blank(string value) => string.IsNullOrWhiteSpace(value);
+
+    private async Task SaveAsync()
+    {
+        _messageIsError = true;
+        if (Blank(_nameUk) || Blank(_nameEn) || Blank(_descriptionUk) || Blank(_descriptionEn))
+        {
+            _messageKey = "AdminFillRequired";
+            return;
+        }
+
+        var input = new CategoryInput(_nameUk.Trim(), _nameEn.Trim(), _descriptionUk.Trim(), _descriptionEn.Trim());
+        var result = _editingId is int id
+            ? await Admin.ReplaceCategoryAsync(id, input)
+            : await Admin.CreateCategoryAsync(input);
+        if (!result.Succeeded)
+        {
+            _messageKey = result.ErrorKey;
+            return;
+        }
+
+        _messageIsError = false;
+        _messageKey = "AdminSaved";
+        ResetForm();
+        await RefreshAsync();
+    }
+
+    private async Task DeleteAsync(AdminCategory item)
+    {
+        _messageKey = null;
+        var confirmed = await JS.InvokeAsync<bool>("confirm", L["ConfirmDeleteItem", item.NameUk].Value);
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var result = await Admin.DeleteCategoryAsync(item.Id);
+        if (!result.Succeeded)
+        {
+            _messageIsError = true;
+            _messageKey = result.ErrorKey;
+            return;
+        }
+
+        if (_editingId == item.Id)
+        {
+            ResetForm();
+        }
+
+        await RefreshAsync();
+    }
+}

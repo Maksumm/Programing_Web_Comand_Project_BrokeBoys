@@ -123,6 +123,17 @@ public class AuthorizationTests(PostgresFixture fixture) : ApiTestBase(fixture)
         await (await SendAsync(method, url, TestTokens.Create(roles: Admin))).AssertProblemAsync(HttpStatusCode.Forbidden);
     }
 
+    [Theory]
+    [InlineData("GET", "/api/subscriptions")]
+    [InlineData("POST", "/api/subscriptions")]
+    [InlineData("DELETE", "/api/subscriptions/1")]
+    public async Task Subscriptions_WithATokenThatHasNoUserIdentifier_Return403(string method, string url)
+    {
+        var anonymousSubject = TestTokens.Create(roles: Subscriber, ownerId: null);
+
+        await (await SendAsync(method, url, anonymousSubject)).AssertProblemAsync(HttpStatusCode.Forbidden);
+    }
+
     // ---------- success with the needed role ----------
 
     [Theory]

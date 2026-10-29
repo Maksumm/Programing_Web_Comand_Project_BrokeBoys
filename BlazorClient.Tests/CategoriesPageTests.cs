@@ -13,8 +13,8 @@ namespace BlazorClient.Tests
 
         private static List<Category> Sample() => new()
         {
-            new Category { Id = 1, Name = "Овочі", Description = "Свіжі овочі", SubscriptionsCount = 3 },
-            new Category { Id = 2, Name = "Фрукти", Description = "Сезонні фрукти", SubscriptionsCount = 5 }
+            new Category { Id = 1, Name = "Овочі", Description = "Свіжі овочі", ProductsCount = 4, SubscriptionsCount = 3 },
+            new Category { Id = 2, Name = "Фрукти", Description = "Сезонні фрукти", ProductsCount = 2, SubscriptionsCount = 5 }
         };
 
         [Fact]
@@ -38,9 +38,25 @@ namespace BlazorClient.Tests
 
             var cut = ctx.Render<CategoriesPage>();
 
-            Assert.Equal(ctx.Localizer()["ErrorLoadingCategories"].Value, cut.Find(".error-state").TextContent.Trim());
+            var text = cut.Find(".error-state").TextContent;
+            Assert.Contains(ctx.Localizer()["ErrorLoadingCategories"].Value, text);
+            Assert.Contains(ctx.Localizer()["TryAgain"].Value, text);
             Assert.Empty(cut.FindAll(".mud-progress-circular"));
             Assert.Single(cut.FindAll("button"));
+        }
+
+        [Fact]
+        public async Task ErrorState_ShowsTheRealReason_AndHttpStatus()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.AddState<Category>().SetError("ErrorForbidden", 403);
+
+            var cut = ctx.Render<CategoriesPage>();
+
+            var text = TestHelpers.Text(cut.Find(".error-state").TextContent);
+            Assert.Contains(ctx.Localizer()["ErrorForbidden"].Value, text);
+            Assert.Contains("HTTP 403", text);
+            Assert.DoesNotContain(ctx.Localizer()["CheckInternetAndTryAgain"].Value, text);
         }
 
         [Fact]
@@ -51,7 +67,7 @@ namespace BlazorClient.Tests
 
             var cut = ctx.Render<CategoriesPage>();
 
-            Assert.Equal(ctx.Localizer()["CategoriesYetEmpty"].Value, cut.Find(".empty-state").TextContent.Trim());
+            Assert.Contains(ctx.Localizer()["CategoriesYetEmpty"].Value, cut.Find(".empty-state").TextContent);
             Assert.Empty(cut.FindAll(".mud-card"));
         }
 
@@ -67,6 +83,7 @@ namespace BlazorClient.Tests
             var text = TestHelpers.Text(cut.Markup);
             Assert.Contains("Овочі", text);
             Assert.Contains("Фрукти", text);
+            Assert.Contains(ctx.Localizer()["ProductsLabel"].Value + ": 4", text);
             Assert.Empty(cut.FindAll(".error-state"));
         }
 
@@ -115,7 +132,7 @@ namespace BlazorClient.Tests
             cut.FindAll("button")[0].Click();
 
             var nav = ctx.Services.GetRequiredService<NavigationManager>();
-            Assert.EndsWith("/subscriptions", nav.Uri);
+            Assert.Contains("/subscriptions?category=", nav.Uri);
         }
     }
 }

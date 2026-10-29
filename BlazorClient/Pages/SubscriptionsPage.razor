@@ -5,6 +5,8 @@
 @inject ListState<Subscription> Store
 @inject ICatalogueApi Api
 @inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject CurrentUserState User
 
 <RoleGate Role="Subscriber">
 @switch (Store.State)
@@ -17,15 +19,13 @@
         break;
 
     case ViewState.Error:
-        <MudPaper Class="pa-12 text-center my-4" Style="border-radius: 16px; background-color: white;" Elevation="0">
-            <MudAvatar Style="background-color: #D1E2D9; color: #1E3A2B; width: 64px; height: 64px;" Class="mb-4">
-                <MudIcon Icon="@Icons.Material.Filled.PriorityHigh" Size="Size.Large" />
-            </MudAvatar>
-            <MudText Typo="Typo.h5" Class="fw-bold mb-2">@L["ErrorLoading"]</MudText>
-            <MudButton Variant="Variant.Filled" Style="background-color: #1E3A2B; color: white; border-radius: 20px;" Class="mt-4" OnClick="Retry">
-                @L["TryAgain"]
-            </MudButton>
-        </MudPaper>
+        <StateCard CssClass="error-state"
+                   Icon="@Icons.Material.Filled.PriorityHigh"
+                   Title="@L["ErrorLoading"]"
+                   ErrorKey="@Store.ErrorKey"
+                   ErrorStatus="@Store.ErrorStatus"
+                   ActionText="@L["TryAgain"]"
+                   OnAction="Retry" />
         break;
 
     default:
@@ -62,8 +62,16 @@
             <MudItem xs="12" md="4">
                 <MudPaper Class="pa-6 mb-4" Style="border-radius: 16px; background-color: #1E3A2B; color: white;" Elevation="0">
                     <MudText Typo="Typo.caption" Style="opacity: 0.8;">@L["NextNotification"]</MudText>
-                    <MudText Typo="Typo.h5" Class="fw-bold mb-2">@L["MonthApril"]</MudText>
-                    <MudText Typo="Typo.body2" Style="opacity: 0.9;" Class="mb-4">@L["NextNotificationText", 18]</MudText>
+                    @if (_outlook is { Month: int outlookMonth } outlook)
+                    {
+                        <MudText Typo="Typo.h5" Class="fw-bold mb-2" data-outlook="drop">@L["Month_" + MonthKeys[outlookMonth - 1]]</MudText>
+                        <MudText Typo="Typo.body2" Style="opacity: 0.9;" Class="mb-4">@L["NextNotificationDropText", outlook.ProductName, outlook.Percent]</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.h5" Class="fw-bold mb-2" data-outlook="none">—</MudText>
+                        <MudText Typo="Typo.body2" Style="opacity: 0.9;" Class="mb-4">@(ActiveCount == 0 ? L["NextNotificationNoSubscriptions"] : L["NextNotificationNoDrop"])</MudText>
+                    }
 
                     <MudDivider Style="background-color: rgba(255,255,255,0.2);" Class="my-3" />
 
@@ -82,7 +90,7 @@
 
                 <MudPaper Class="pa-6" Style="border-radius: 16px; background-color: white;" Elevation="0">
                     <MudText Typo="Typo.subtitle2" Class="fw-bold mb-2">@L["WhereToSendNotifications"]</MudText>
-                    <SubscribeFormComponent OnSubmitted="AddSubscription" />
+                    <SubscribeFormComponent Categories="_categories" InitialCategory="@InitialCategory" InitialEmail="@_email" OnSubmitted="AddSubscription" />
                 </MudPaper>
             </MudItem>
         </MudGrid>
@@ -91,14 +99,114 @@
 </RoleGate>
 
 @code {
+    private static readonly string[] MonthKeys =
+        { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+    private sealed record Outlook(string ProductName, int? Month, int Percent);
+
     private string? _errorKey;
+    private string? _email;
+    private Outlook? _outlook;
+    private string _outlookKey = string.Empty;
+    private IReadOnlyList<Category> _categories = new List<Category>();
 
     private int ActiveCount => Store.Items.Count(s => s.IsActive);
+
+    /// <summary>Категорія з адреси <c>?category=ID</c> (кнопка «Підписатися» на картці категорії).</summary>
+    private string? InitialCategory
+    {
+        get
+        {
+            var query = new Uri(Nav.Uri).Query.TrimStart('?');
+            foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var pair = part.Split('=', 2);
+                if (pair.Length == 2 && pair[0] == "category" && int.TryParse(pair[1], out var id))
+                {
+                    return _categories.FirstOrDefault(c => c.Id == id)?.Name;
+                }
+            }
+
+            return null;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
         Store.Changed += OnStoreChanged;
+        var categories = LoadCategoriesAsync();
+        var email = LoadEmailAsync();
         await Store.EnsureLoadedAsync(Api.GetSubscriptionsAsync);
+        await categories;
+        await email;
+        await RefreshOutlookAsync();
+    }
+
+    private async Task LoadEmailAsync() => _email = (await User.GetAsync())?.Email;
+
+    /// <summary>
+    /// «Наступне сповіщення»: серед активних підписок шукаємо категорію, де найближчим часом найбільше подешевшання.
+    /// Для категорії беремо її перший товар. Перераховується лише коли змінився набір активних категорій.
+    /// </summary>
+    private async Task RefreshOutlookAsync()
+    {
+        var categoryIds = Store.Items.Where(s => s.IsActive).Select(s => s.CategoryId).Distinct().OrderBy(id => id).ToList();
+        var key = string.Join(',', categoryIds);
+        if (key == _outlookKey)
+        {
+            return;
+        }
+
+        _outlookKey = key;
+        _outlook = null;
+        if (categoryIds.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var products = (await Api.GetProductsAsync()).ToList();
+            Outlook? best = null;
+            foreach (var categoryId in categoryIds)
+            {
+                var product = products.FirstOrDefault(p => p.CategoryId == categoryId);
+                if (product is null)
+                {
+                    continue;
+                }
+
+                var prices = (await Api.GetCalendarAsync(product.Id))
+                    .Where(p => p.MonthNumber is >= 1 and <= 12)
+                    .GroupBy(p => p.MonthNumber)
+                    .ToDictionary(g => g.Key, g => g.First().Price);
+                var advice = PriceAdvisor.Advise(prices, DateTime.Today.Month);
+                if (advice.Kind == AdviceKind.Wait && (best is null || advice.Percent > best.Percent))
+                {
+                    best = new Outlook(product.Name, advice.Month, advice.Percent);
+                }
+            }
+
+            _outlook = best;
+        }
+        catch (Exception)
+        {
+            // the card is informative only: without prices it falls back to the "no drop expected" text
+            _outlook = null;
+        }
+    }
+
+    private async Task LoadCategoriesAsync()
+    {
+        try
+        {
+            _categories = (await Api.GetCategoriesAsync()).ToList();
+        }
+        catch (Exception)
+        {
+            // the dropdown stays empty; the list of subscriptions is still usable
+            _categories = new List<Category>();
+        }
     }
 
     private void OnStoreChanged() => _ = InvokeAsync(StateHasChanged);
@@ -117,6 +225,7 @@
         }
 
         Store.NotifyChanged();
+        await RefreshOutlookAsync();
     }
 
     private async Task OnDeleted(Subscription subscription)
@@ -132,6 +241,7 @@
         if (result.Succeeded)
         {
             Store.SetItems(Store.Items.Where(s => s.Id != subscription.Id));
+            await RefreshOutlookAsync();
         }
         else
         {
@@ -147,6 +257,7 @@
         if (result.Succeeded)
         {
             Store.Add(result.Value!);
+            await RefreshOutlookAsync();
         }
         else
         {

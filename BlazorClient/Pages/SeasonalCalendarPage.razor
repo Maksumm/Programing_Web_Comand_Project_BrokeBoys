@@ -11,6 +11,20 @@
 @inject ListState<SeasonalPrice> Store
 @inject ICatalogueApi Api
 @inject ILiveUpdates Live
+@inject CurrentUserState User
+
+@if (_products.Count > 0)
+{
+    <div class="mb-4" data-product-picker>
+        <label for="product-select" class="mud-typography mud-typography-caption" style="color: #666; display: block;">@L["ProductLabel"]</label>
+        <select id="product-select" class="app-select" value="@SelectedProductId" @onchange="OnProductChanged">
+            @foreach (var product in _products)
+            {
+                <option value="@product.Id" @key="product.Id">@product.Name</option>
+            }
+        </select>
+    </div>
+}
 
 @if (Store.State == ViewState.Loading)
 {
@@ -24,16 +38,14 @@
 else if (Store.State == ViewState.Error)
 {
     <!-- Помилка -->
-    <MudPaper Class="pa-12 text-center my-8" Style="border-radius: 16px; background-color: white;" Elevation="0">
-        <MudAvatar Style="background-color: #D1E2D9; color: #1E3A2B; width: 64px; height: 64px;" Class="mb-4">
-            <MudIcon Icon="@Icons.Material.Filled.PriorityHigh" Size="Size.Large" />
-        </MudAvatar>
-        <MudText Typo="Typo.h5" Class="fw-bold mb-2">@L["FailedToLoadData"]</MudText>
-        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-6">@L["CheckInternetAndTryAgain"]</MudText>
-        <MudButton Variant="Variant.Filled" Style="background-color: #1E3A2B; color: white; border-radius: 20px; text-transform: none;" Class="px-6" OnClick="Retry">
-            @L["TryAgain"]
-        </MudButton>
-    </MudPaper>
+    <StateCard CssClass="error-state"
+               Icon="@Icons.Material.Filled.PriorityHigh"
+               Title="@L["FailedToLoadData"]"
+               Message="@L["CheckInternetAndTryAgain"]"
+               ErrorKey="@Store.ErrorKey"
+               ErrorStatus="@Store.ErrorStatus"
+               ActionText="@L["TryAgain"]"
+               OnAction="Retry" />
 }
 else if (Store.State == ViewState.Empty)
 {
@@ -46,15 +58,17 @@ else if (Store.State == ViewState.Empty)
         <MudText Typo="Typo.body2" Class="mud-text-secondary mb-6">@L["ChooseProductForBestBuy"]</MudText>
 
         <div class="d-flex justify-center gap-2 flex-wrap mt-4">
-            <MudChip T="string" Style="border-radius: 16px;">@L["Firewood"]</MudChip>
-            <MudChip T="string" Style="border-radius: 16px;">@L["Tires"]</MudChip>
-            <MudChip T="string" Style="border-radius: 16px;">@L["BuildingMaterials"]</MudChip>
-            <MudChip T="string" Style="border-radius: 16px;">@L["Fuel"]</MudChip>
+            @foreach (var product in _products)
+            {
+                var productId = product.Id;
+                <MudChip T="string" Style="border-radius: 16px;" OnClick="@(() => SelectProductAsync(productId))" @key="product.Id">@product.Name</MudChip>
+            }
         </div>
     </MudPaper>
 }
 else
 {
+    var verdict = ComputeVerdict();
     <!-- Сторінка з даними -->
     <div class="mb-4">
         <MudText Typo="Typo.caption" Style="color: #666;">@L["Calendar"]</MudText>
@@ -89,22 +103,28 @@ else
         <MudItem Xs="12" Md="4">
             <!-- Зелена картка з вердиктом -->
             <MudPaper Class="pa-6 mb-4" Style="border-radius: 16px; background-color: #1E3A2B; color: white;" Elevation="0">
-                <MudText Typo="Typo.caption" Style="opacity: 0.8;">@L["VerdictOctober"]</MudText>
-                <MudText Typo="Typo.h5" Class="fw-bold mb-2">@L["BuyNow"]</MudText>
-                <MudText Typo="Typo.body2" Style="opacity: 0.9;" Class="mb-4">@L["PriceWillIncreaseText"]</MudText>
+                <MudText Typo="Typo.caption" Style="opacity: 0.8;">@L["VerdictForMonth", DateTime.Today.ToString("MMMM yyyy", CultureInfo.CurrentUICulture)]</MudText>
+                <MudText Typo="Typo.h5" Class="fw-bold mb-2" data-verdict="@verdict.Kind">@VerdictTitle(verdict)</MudText>
+                <MudText Typo="Typo.body2" Style="opacity: 0.9;" Class="mb-4">@L[verdict.TextKey, verdict.Args]</MudText>
 
                 <div class="d-flex gap-2">
-                    <MudChip T="string" Size="Size.Small" Style="background-color: #2D5A3F; color: white;">@L["BuyNow"]</MudChip>
-                    <MudChip T="string" Size="Size.Small" Style="background-color: rgba(255,255,255,0.15); color: white;">@L["Wait"]</MudChip>
-                    <MudChip T="string" Size="Size.Small" Style="background-color: rgba(255,255,255,0.15); color: white;">@L["Avoid"]</MudChip>
+                    <MudChip T="string" Size="Size.Small" Style="@ChipStyle(verdict, "Buy")">@L["BuyNow"]</MudChip>
+                    <MudChip T="string" Size="Size.Small" Style="@ChipStyle(verdict, "Wait")">@L["Wait"]</MudChip>
+                    <MudChip T="string" Size="Size.Small" Style="@ChipStyle(verdict, "Avoid")">@L["Avoid"]</MudChip>
                 </div>
             </MudPaper>
 
             <!-- Біла картка форма сповіщення -->
             <MudPaper Class="pa-6" Style="border-radius: 16px; background-color: white;" Elevation="0">
                 <MudText Typo="Typo.subtitle2" Class="fw-bold mb-1">@L["PriceNotifications"]</MudText>
-                <MudTextField T="string" Placeholder="@L["TelegramOrEmailPlaceholder"]" Variant="Variant.Outlined" Class="mb-3" Margin="Margin.Dense" Style="background-color: #F8F9FA;" />
-                <MudButton Variant="Variant.Filled" Style="background-color: #1E3A2B; color: white; border-radius: 20px; text-transform: none;" FullWidth="true">
+                <MudTextField T="string" @bind-Value="_email" Immediate="true" Label="@L["EmailLabel"]" Variant="Variant.Outlined" Class="mb-3" Margin="Margin.Dense" Style="background-color: #F8F9FA;" />
+
+                @if (_messageKey is string messageKey)
+                {
+                    <MudAlert Severity="@(_messageIsError ? Severity.Error : Severity.Success)" Class="mb-3">@L[messageKey]</MudAlert>
+                }
+
+                <MudButton id="calendar-subscribe" Variant="Variant.Filled" Disabled="@_subscribing" OnClick="SubscribeAsync" Style="background-color: #1E3A2B; color: white; border-radius: 20px; text-transform: none;" FullWidth="true">
                     @L["Subscribe"]
                 </MudButton>
             </MudPaper>
@@ -147,27 +167,149 @@ else
         }).ToList();
     }
 
+    private int? _productId;
+    private List<ProductOption> _products = new();
+    private string _email = string.Empty;
+    private string? _messageKey;
+    private bool _messageIsError;
+    private bool _subscribing;
+
+    private sealed record Verdict(string Kind, string TextKey, object[] Args);
+
+    /// <summary>Обраний товар: явний вибір користувача, інакше той, чиї ціни завантажено, інакше перший зі списку.</summary>
+    private int SelectedProductId =>
+        _productId
+        ?? (Store.Items.Count > 0 && Store.Items[0].ProductId > 0 ? Store.Items[0].ProductId : (_products.Count > 0 ? _products[0].Id : 0));
+
+    /// <summary>Категорія показаного товару: за нею підписуємося на групу SignalR і на сповіщення.</summary>
+    private int CurrentCategoryId =>
+        _products.FirstOrDefault(p => p.Id == SelectedProductId)?.CategoryId
+        ?? Store.Items.FirstOrDefault()?.CategoryId
+        ?? 0;
+
+    private Task<IEnumerable<SeasonalPrice>> LoadPrices() =>
+        _productId is int id ? Api.GetCalendarAsync(id) : Api.GetCalendarAsync();
+
+    /// <summary>Порада за реальними цінами показаного товару (логіка спільна з екраном підписок).</summary>
+    private Verdict ComputeVerdict()
+    {
+        var prices = Store.Items
+            .Where(i => i.MonthNumber is >= 1 and <= 12)
+            .GroupBy(i => i.MonthNumber)
+            .ToDictionary(g => g.Key, g => g.First().Price);
+        var advice = PriceAdvisor.Advise(prices, DateTime.Today.Month);
+
+        object[] args = advice.Kind switch
+        {
+            AdviceKind.Wait => new object[] { L["Month_" + MonthKeys[advice.Month!.Value - 1]].Value, advice.Percent },
+            AdviceKind.Buy or AdviceKind.Avoid when advice.TextKey != "VerdictStableText" => new object[] { advice.Percent },
+            _ => Array.Empty<object>()
+        };
+        return new Verdict(advice.Kind.ToString(), advice.TextKey, args);
+    }
+
+    private string VerdictTitle(Verdict verdict) => verdict.Kind switch
+    {
+        "Buy" => L["BuyNow"].Value,
+        "Wait" => L["Wait"].Value,
+        "Avoid" => L["Avoid"].Value,
+        _ => "—"
+    };
+
+    private static string ChipStyle(Verdict verdict, string kind) => verdict.Kind == kind
+        ? "background-color: #2D5A3F; color: white;"
+        : "background-color: rgba(255,255,255,0.15); color: white;";
+
     protected override async Task OnInitializedAsync()
     {
         Store.Changed += OnStoreChanged;
         Live.StateChanged += OnStoreChanged;
         Live.PriceChanged += OnPriceChanged;
-        await Store.EnsureLoadedAsync(Api.GetCalendarAsync);
+        await Store.EnsureLoadedAsync(LoadPrices);
         await JoinLiveAsync();
+        await LoadProductsAndEmailAsync();
+    }
+
+    private async Task LoadProductsAndEmailAsync()
+    {
+        try
+        {
+            _products = (await Api.GetProductsAsync()).ToList();
+        }
+        catch (Exception)
+        {
+            // the picker is optional: the calendar already shows the first product
+            _products = new List<ProductOption>();
+        }
+
+        var user = await User.GetAsync();
+        if (string.IsNullOrWhiteSpace(_email) && !string.IsNullOrWhiteSpace(user?.Email))
+        {
+            _email = user.Email;
+        }
+    }
+
+    private async Task OnProductChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            await SelectProductAsync(id);
+        }
+    }
+
+    private async Task SelectProductAsync(int productId)
+    {
+        _productId = productId;
+        _messageKey = null;
+        await Store.ReloadAsync(LoadPrices);
+        await JoinLiveAsync();
+    }
+
+    /// <summary>Підписка на сповіщення про категорію показаного товару з поштою, яку вказав користувач.</summary>
+    private async Task SubscribeAsync()
+    {
+        _messageKey = null;
+        _messageIsError = true;
+
+        var email = _email.Trim();
+        if (email.Length == 0 || !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email))
+        {
+            _messageKey = "EmailInvalid";
+            return;
+        }
+
+        var categoryId = CurrentCategoryId;
+        if (categoryId <= 0)
+        {
+            _messageKey = "ErrorCategoryNotFound";
+            return;
+        }
+
+        _subscribing = true;
+        try
+        {
+            var result = await Api.SubscribeToCategoryAsync(categoryId, email);
+            _messageIsError = !result.Succeeded;
+            _messageKey = result.Succeeded ? "SubscribedToCategory" : result.ErrorKey;
+        }
+        finally
+        {
+            _subscribing = false;
+        }
     }
 
     /// <summary>Підписка на групу категорії показаного товару: лише її зміни приходять на цю сторінку.</summary>
     private async Task JoinLiveAsync()
     {
-        var first = Store.Items.FirstOrDefault();
-        if (first is null)
+        var categoryId = CurrentCategoryId;
+        if (categoryId <= 0)
         {
             return;
         }
 
         try
         {
-            await Live.JoinCategoryAsync(first.CategoryId);
+            await Live.JoinCategoryAsync(categoryId);
         }
         catch (Exception)
         {
@@ -178,7 +320,7 @@ else
     /// <summary>Сервер повідомив про зміну: тихо перечитуємо ціни, сторінка не перезавантажується і не показує спінер.</summary>
     private void OnPriceChanged(PriceChanged change) => _ = InvokeAsync(async () =>
     {
-        await Store.RefreshAsync(Api.GetCalendarAsync);
+        await Store.RefreshAsync(LoadPrices);
         await JoinLiveAsync();
     });
 
@@ -186,7 +328,7 @@ else
 
     private async Task Retry()
     {
-        await Store.ReloadAsync(Api.GetCalendarAsync);
+        await Store.ReloadAsync(LoadPrices);
         await JoinLiveAsync();
     }
 

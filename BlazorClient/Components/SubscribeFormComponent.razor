@@ -12,14 +12,17 @@
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense" />
 
-            <MudTextField T="string"
-                          Label="@L["CategoryLabel"]"
-                          @bind-Value="model.Category"
-                          For="@(() => model.Category)"
-                          Immediate="true"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Class="mt-3" />
+            <div class="mt-3">
+                <label for="subscribe-category" class="mud-typography mud-typography-caption" style="color: #666; display: block;">@L["CategoryLabel"]</label>
+                <InputSelect id="subscribe-category" class="app-select" @bind-Value="model.Category">
+                    <option value="">@L["ChooseCategory"]</option>
+                    @foreach (var category in Categories)
+                    {
+                        <option value="@category.Name" @key="category.Id">@category.Name</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="@(() => model.Category)" />
+            </div>
 
             <MudNumericField T="decimal?"
                              Label="@L["ThresholdLabel"]"
@@ -46,6 +49,33 @@
     /// <summary>Викликається після успішної валідації; отримує копію даних форми.</summary>
     [Parameter] public EventCallback<SubscribeFormModel> OnSubmitted { get; set; }
 
+    /// <summary>Категорії для випадного списку (завантажує сторінка).</summary>
+    [Parameter] public IReadOnlyList<Category> Categories { get; set; } = Array.Empty<Category>();
+
+    /// <summary>Назва категорії, яку слід вибрати наперед (наприклад, після кнопки «Підписатися» на картці категорії).</summary>
+    [Parameter] public string? InitialCategory { get; set; }
+
+    /// <summary>Пошта користувача з токена: підставляється в поле, поки воно порожнє.</summary>
+    [Parameter] public string? InitialEmail { get; set; }
+
+    private bool _initialApplied;
+    private bool _emailApplied;
+
+    protected override void OnParametersSet()
+    {
+        if (!_emailApplied && !string.IsNullOrWhiteSpace(InitialEmail) && string.IsNullOrEmpty(model.Email))
+        {
+            model.Email = InitialEmail;
+            _emailApplied = true;
+        }
+
+        if (!_initialApplied && !string.IsNullOrEmpty(InitialCategory) && Categories.Any(c => c.Name == InitialCategory))
+        {
+            model.Category = InitialCategory;
+            _initialApplied = true;
+        }
+    }
+
     private async Task HandleValidSubmit()
     {
         var snapshot = new SubscribeFormModel
@@ -57,7 +87,7 @@
 
         await OnSubmitted.InvokeAsync(snapshot);
 
-        model.Email = string.Empty;
+        model.Email = InitialEmail ?? string.Empty;
         model.Category = string.Empty;
         model.Threshold = null;
     }

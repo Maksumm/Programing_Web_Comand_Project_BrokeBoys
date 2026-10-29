@@ -22,6 +22,11 @@
             <NavLink href="calendar" class="nav-link-custom">@L["Calendar"]</NavLink>
             <NavLink href="categories" class="nav-link-custom">@L["CategoriesTitle"]</NavLink>
             <NavLink href="subscriptions" class="nav-link-custom">@L["Subscriptions"]</NavLink>
+            <AuthorizeView>
+                <Authorized>
+                    <AdminNavLink />
+                </Authorized>
+            </AuthorizeView>
         </div>
 
         <MudSpacer />

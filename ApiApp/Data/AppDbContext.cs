@@ -61,11 +61,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
         modelBuilder.Entity<Subscription>(entity =>
         {
+            entity.Property(s => s.OwnerId).HasMaxLength(128).IsRequired();
             entity.Property(s => s.Email).HasMaxLength(254).IsRequired();
             entity.Property(s => s.Threshold).HasPrecision(7, 2);
 
-            // Одна пошта — одна підписка на категорію.
-            entity.HasIndex(s => new { s.Email, s.CategoryId }).IsUnique();
+            // Один користувач — одна підписка на категорію.
+            entity.HasIndex(s => new { s.OwnerId, s.CategoryId }).IsUnique();
 
             entity.ToTable(table => table.HasCheckConstraint(
                 "CK_Subscriptions_Threshold", "\"Threshold\" IS NULL OR \"Threshold\" BETWEEN 0.01 AND 1000"));

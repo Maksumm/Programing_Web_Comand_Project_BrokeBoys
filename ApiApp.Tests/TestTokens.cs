@@ -14,6 +14,9 @@ public static class TestTokens
     public const string AdminRole = "Admin";
     public const string SubscriberRole = "Subscriber";
 
+    /// <summary>Ідентифікатор користувача (claim <c>oid</c>) у токенах за замовчуванням: власник демо-підписок у тестах.</summary>
+    public const string OwnerId = "33333333-3333-3333-3333-333333333333";
+
     /// <summary>Audience API: Application ID URI.</summary>
     public const string ApiAudience = "api://" + ApiClientId;
 
@@ -28,14 +31,19 @@ public static class TestTokens
         DateTime? expires = null,
         SecurityKey? key = null,
         string name = "Test User",
-        string email = "tester@example.com")
+        string email = "tester@example.com",
+        string? ownerId = OwnerId)
     {
         var claims = new Dictionary<string, object>
         {
             ["name"] = name,
-            ["preferred_username"] = email,
-            ["oid"] = "33333333-3333-3333-3333-333333333333"
+            ["preferred_username"] = email
         };
+        if (ownerId is not null)
+        {
+            claims["oid"] = ownerId;
+        }
+
         if (scope is not null)
         {
             claims["scp"] = scope;

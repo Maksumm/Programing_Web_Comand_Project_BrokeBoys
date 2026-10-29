@@ -1,0 +1,266 @@
+@using System.Globalization
+@inject IAdminApi Admin
+@inject IJSRuntime JS
+
+@if (_loading)
+{
+    <StateCard Loading="true" Title="@L["AdminLoading"]" />
+}
+else if (_loadError is not null)
+{
+    <StateCard CssClass="error-state"
+               Icon="@Icons.Material.Filled.PriorityHigh"
+               Title="@L["FailedToLoadData"]"
+               Message="@L["CheckInternetAndTryAgain"]"
+               ErrorKey="@_loadError.Key"
+               ErrorStatus="@_loadError.Status"
+               ActionText="@L["TryAgain"]"
+               OnAction="LoadAsync" />
+}
+else if (_products.Count == 0)
+{
+    <StateCard CssClass="empty-state"
+               Icon="@Icons.Material.Filled.Category"
+               Title="@L["AdminNothingYet"]"
+               Message="@L["AdminAddProductFirst"]" />
+}
+else
+{
+    <MudPaper Class="pa-6 mb-4" Style="border-radius: 16px; background-color: white;" Elevation="0">
+        <div class="mb-4">
+            <label for="price-product" class="mud-typography mud-typography-caption" style="color: #666; display: block;">@L["ProductLabel"]</label>
+            <select id="price-product" class="app-select" value="@_productId" @onchange="OnProductChanged">
+                @foreach (var product in _products)
+                {
+                    <option value="@product.Id" @key="product.Id">@product.NameUk</option>
+                }
+            </select>
+        </div>
+
+        <MudText Typo="Typo.subtitle1" Class="fw-bold mb-3">@(_editingId is null ? L["AdminAddPrice"] : L["AdminEditPrice"])</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <label for="price-month" class="mud-typography mud-typography-caption" style="color: #666; display: block;">@L["MonthLabel"]</label>
+                <select id="price-month" class="app-select" value="@_month" @onchange="OnMonthChanged">
+                    @for (var month = 1; month <= 12; month++)
+                    {
+                        <option value="@month" @key="month">@L["Month_" + MonthKeys[month - 1]]</option>
+                    }
+                </select>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudNumericField T="decimal?"
+                                 Label="@L["PriceLabel"]"
+                                 @bind-Value="_price"
+                                 Culture="@CultureInfo.CurrentCulture"
+                                 Immediate="true"
+                                 HideSpinButtons="true"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense" />
+            </MudItem>
+        </MudGrid>
+
+        @if (_messageKey is string messageKey)
+        {
+            <MudAlert Severity="@(_messageIsError ? Severity.Error : Severity.Success)" Class="mt-3">@L[messageKey]</MudAlert>
+        }
+
+        <div class="d-flex gap-2 mt-3">
+            <MudButton id="price-save" Variant="Variant.Filled" OnClick="SaveAsync" Style="background-color: #1E3A2B; color: white; border-radius: 20px; text-transform: none;">@L["Save"]</MudButton>
+            @if (_editingId is not null)
+            {
+                <MudButton id="price-cancel" Variant="Variant.Text" OnClick="CancelEdit" Style="text-transform: none;">@L["AdminCancel"]</MudButton>
+            }
+        </div>
+    </MudPaper>
+
+    <MudPaper Class="pa-6" Style="border-radius: 16px; background-color: white;" Elevation="0">
+        @if (_prices.Count == 0)
+        {
+            <div class="empty-state">@L["AdminNothingYet"]</div>
+        }
+        else
+        {
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>@L["MonthLabel"]</th>
+                        <th>@L["PriceLabel"]</th>
+                        <th>@L["AdminActions"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _prices)
+                    {
+                        <tr @key="item.Id">
+                            <td>@L["Month_" + MonthKeys[item.Month - 1]]</td>
+                            <td>@item.Price.ToString("0.##", CultureInfo.CurrentCulture)</td>
+                            <td>
+                                <button type="button" class="admin-action" data-action="edit" @onclick="() => StartEdit(item)">@L["AdminEdit"]</button>
+                                <button type="button" class="admin-action admin-action-danger" data-action="delete" @onclick="() => DeleteAsync(item)">@L["DeleteLabel"]</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </MudPaper>
+}
+
+@code {
+    private static readonly string[] MonthKeys =
+        { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+    private bool _loading = true;
+    private ApiErrors.Failure? _loadError;
+    private List<AdminProduct> _products = new();
+    private List<AdminPrice> _prices = new();
+    private int _productId;
+    private int _month = 1;
+    private decimal? _price;
+    private int? _editingId;
+    private string? _messageKey;
+    private bool _messageIsError;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _loadError = null;
+        try
+        {
+            _products = (await Admin.GetProductsAsync()).ToList();
+            _productId = _products.FirstOrDefault()?.Id ?? 0;
+            await LoadPricesAsync();
+        }
+        catch (Exception exception)
+        {
+            _loadError = ApiErrors.Describe(exception);
+        }
+
+        _loading = false;
+    }
+
+    private async Task LoadPricesAsync()
+    {
+        _prices = _productId > 0 ? (await Admin.GetPricesAsync(_productId)).OrderBy(p => p.Month).ToList() : new List<AdminPrice>();
+        _month = NextFreeMonth();
+    }
+
+    private async Task RefreshAsync()
+    {
+        try
+        {
+            await LoadPricesAsync();
+        }
+        catch (Exception)
+        {
+            // the write already succeeded; the list is refreshed on the next load
+        }
+    }
+
+    /// <summary>Перший місяць, для якого ще немає ціни: саме його найчастіше й додають.</summary>
+    private int NextFreeMonth()
+    {
+        var free = Enumerable.Range(1, 12).FirstOrDefault(month => _prices.All(p => p.Month != month));
+        return free == 0 ? 1 : free;
+    }
+
+    private async Task OnProductChanged(ChangeEventArgs e)
+    {
+        _productId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+        _messageKey = null;
+        ResetForm();
+        try
+        {
+            await LoadPricesAsync();
+        }
+        catch (Exception exception)
+        {
+            _loadError = ApiErrors.Describe(exception);
+        }
+    }
+
+    private void OnMonthChanged(ChangeEventArgs e) =>
+        _month = int.TryParse(e.Value?.ToString(), out var month) && month is >= 1 and <= 12 ? month : 1;
+
+    private void StartEdit(AdminPrice item)
+    {
+        _editingId = item.Id;
+        _month = item.Month;
+        _price = item.Price;
+        _messageKey = null;
+    }
+
+    private void CancelEdit()
+    {
+        ResetForm();
+        _messageKey = null;
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _price = null;
+        _month = NextFreeMonth();
+    }
+
+    private async Task SaveAsync()
+    {
+        _messageIsError = true;
+        if (_productId <= 0)
+        {
+            _messageKey = "AdminFillRequired";
+            return;
+        }
+
+        if (_price is null || _price <= 0)
+        {
+            _messageKey = "AdminPriceInvalid";
+            return;
+        }
+
+        var input = new PriceInput(_productId, _month, _price.Value);
+        var result = _editingId is int id
+            ? await Admin.ReplacePriceAsync(id, input)
+            : await Admin.CreatePriceAsync(input);
+        if (!result.Succeeded)
+        {
+            _messageKey = result.ErrorKey;
+            return;
+        }
+
+        _messageIsError = false;
+        _messageKey = "AdminSaved";
+        _editingId = null;
+        _price = null;
+        await RefreshAsync();
+    }
+
+    private async Task DeleteAsync(AdminPrice item)
+    {
+        _messageKey = null;
+        var label = L["Month_" + MonthKeys[item.Month - 1]].Value;
+        var confirmed = await JS.InvokeAsync<bool>("confirm", L["ConfirmDeleteItem", label].Value);
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var result = await Admin.DeletePriceAsync(item.Id);
+        if (!result.Succeeded)
+        {
+            _messageIsError = true;
+            _messageKey = result.ErrorKey;
+            return;
+        }
+
+        if (_editingId == item.Id)
+        {
+            ResetForm();
+        }
+
+        await RefreshAsync();
+    }
+}
