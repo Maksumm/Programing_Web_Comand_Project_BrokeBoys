@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
 
 namespace ApiApp.Tests;
 
@@ -21,6 +22,69 @@ namespace ApiApp.Tests;
         Assert.Equal(2, all.Count);
         Assert.Equal(2, mine.Count);
         Assert.Empty(none);
+    }
+
+    private const string Other = "44444444-4444-4444-4444-444444444444";
+
+    /// <summary>Клієнт іншого користувача з правами підписника (інший <c>oid</c> у токені).</summary>
+    private HttpClient OtherUser() =>
+        Factory.CreateClientWithToken(TestTokens.Create(roles: [TestTokens.SubscriberRole], ownerId: Other, email: "other@example.com"));
+
+    [Fact]
+    public async Task List_ReturnsOnlyTheCallersSubscriptions()
+    {
+        using var other = OtherUser();
+
+        Assert.Empty(await (await other.GetAsync("/api/subscriptions")).ReadAsync<List<SubscriptionDto>>());
+
+        var created = await other.PostAsJsonAsync("/api/subscriptions", Valid("other@example.com", 3));
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        var otherList = await (await other.GetAsync("/api/subscriptions")).ReadAsync<List<SubscriptionDto>>();
+        var mine = await (await Client.GetAsync("/api/subscriptions")).ReadAsync<List<SubscriptionDto>>();
+
+        Assert.Equal("other@example.com", Assert.Single(otherList).Email);
+        Assert.Equal(2, mine.Count);
+        Assert.DoesNotContain(mine, s => s.Email == "other@example.com");
+    }
+
+    [Fact]
+    public async Task AnotherUsersSubscription_LooksLikeAMissingOne_ForGetPutAndDelete()
+    {
+        using var other = OtherUser();
+
+        await (await other.GetAsync("/api/subscriptions/1")).AssertProblemAsync(HttpStatusCode.NotFound);
+        await (await other.PutAsJsonAsync("/api/subscriptions/1", Valid("other@example.com", 3))).AssertProblemAsync(HttpStatusCode.NotFound);
+        await (await other.DeleteAsync("/api/subscriptions/1")).AssertProblemAsync(HttpStatusCode.NotFound);
+
+        // the owner still has it, unchanged
+        var item = await (await Client.GetAsync("/api/subscriptions/1")).ReadAsync<SubscriptionDto>();
+        Assert.Equal("user@example.com", item.Email);
+        Assert.Equal(1, item.CategoryId);
+    }
+
+    [Fact]
+    public async Task TwoUsers_CanSubscribeToTheSameCategory_EvenWithTheSameEmail()
+    {
+        using var other = OtherUser();
+
+        // category 1 is already followed by the default user with user@example.com
+        var created = await other.PostAsJsonAsync("/api/subscriptions", Valid("user@example.com", 1));
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_StoresTheCallersOwnerId_NotAnythingFromTheBody()
+    {
+        using var other = OtherUser();
+
+        var created = await other.PostAsJsonAsync("/api/subscriptions", new { email = "a@example.com", categoryId = 3, ownerId = TestTokens.OwnerId });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        await using var db = Postgres.CreateDbContext();
+        var owner = await db.Subscriptions.Where(s => s.Email == "a@example.com").Select(s => s.OwnerId).SingleAsync();
+        Assert.Equal(Other, owner);
     }
 
     [Fact]
@@ -64,9 +128,13 @@ namespace ApiApp.Tests;
     }
 
     [Fact]
-    public async Task Create_Returns409_WhenEmailAlreadySubscribedToCategory()
+    public async Task Create_Returns409_WhenTheCallerIsAlreadySubscribedToTheCategory()
     {
         await (await Client.PostAsJsonAsync("/api/subscriptions", Valid("user@example.com", 1)))
+            .AssertProblemAsync(HttpStatusCode.Conflict);
+
+        // the contact e-mail does not matter: the rule is one subscription per user and category
+        await (await Client.PostAsJsonAsync("/api/subscriptions", Valid("another-address@example.com", 1)))
             .AssertProblemAsync(HttpStatusCode.Conflict);
     }
 
@@ -86,7 +154,7 @@ namespace ApiApp.Tests;
     {
         await (await Client.PutAsJsonAsync("/api/subscriptions/999", Valid())).AssertProblemAsync(HttpStatusCode.NotFound);
         await (await Client.PutAsJsonAsync("/api/subscriptions/1", new { })).AssertProblemAsync(HttpStatusCode.BadRequest);
-        // підписка №2 (шини) переноситься в категорію, на яку той самий e-mail уже підписаний (дрова)
+        // підписка №2 (шини) переноситься в категорію, на яку цей користувач уже підписаний (дрова)
         await (await Client.PutAsJsonAsync("/api/subscriptions/2", Valid("user@example.com", 1)))
             .AssertProblemAsync(HttpStatusCode.Conflict);
     }

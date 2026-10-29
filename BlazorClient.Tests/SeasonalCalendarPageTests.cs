@@ -217,10 +217,8 @@ namespace BlazorClient.Tests
         public async Task Verdict_IsAvoid_WhenThisMonthIsNearTheYearlyPeak()
         {
             await using var ctx = TestHelpers.CreateContext();
-            ctx.AddState<SeasonalPrice>()
-               .SetItems(Relative(offset => offset == 0 ? 300m : offset == 3 ? 100m : 200m));
+            ctx.AddState<SeasonalPrice>().SetItems(Relative(offset => offset == 0 ? 300m : offset == 3 ? 100m : 200m));
 
-            // 2. Лише ПІСЛЯ цього рендеримо компонент (використовуємо Render замість RenderComponent)
             var cut = ctx.Render<SeasonalCalendarPage>();
 
             Assert.Equal("Avoid", VerdictKind(cut));

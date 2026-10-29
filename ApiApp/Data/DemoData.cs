@@ -19,7 +19,10 @@ public static class DemoData
         [9800, 9800, 9700, 9400, 9200, 9000, 9000, 9100, 9300, 9500, 9700, 9800]  // цегла
     ];
 
-    public static async Task SeedAsync(AppDbContext db, CancellationToken cancellationToken = default)
+    /// <summary>Власник демо-підписок за замовчуванням; справжній користувач їх не бачить, бо має власний <c>oid</c>.</summary>
+    public const string DemoOwnerId = "demo-user";
+
+    public static async Task SeedAsync(AppDbContext db, string subscriptionOwnerId = DemoOwnerId, CancellationToken cancellationToken = default)
     {
         if (await db.Categories.AnyAsync(cancellationToken))
         {
@@ -57,8 +60,8 @@ public static class DemoData
         await db.SaveChangesAsync(cancellationToken);
 
         db.Subscriptions.AddRange(
-            new Subscription { Email = "user@example.com", CategoryId = categories[0].Id, Threshold = 90m, IsActive = true },
-            new Subscription { Email = "user@example.com", CategoryId = categories[1].Id, Threshold = 85.5m, IsActive = true });
+            new Subscription { OwnerId = subscriptionOwnerId, Email = "user@example.com", CategoryId = categories[0].Id, Threshold = 90m, IsActive = true },
+            new Subscription { OwnerId = subscriptionOwnerId, Email = "user@example.com", CategoryId = categories[1].Id, Threshold = 85.5m, IsActive = true });
         await db.SaveChangesAsync(cancellationToken);
     }
 }

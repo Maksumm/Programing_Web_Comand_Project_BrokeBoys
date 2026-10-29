@@ -20,8 +20,17 @@ Blazor WebAssembly + MudBlazor. Інтерфейс українською та �
 | Календар сезонних цін | `/`, `/calendar` | `SeasonalCalendarPage` (12 стовпчиків місяців, `@key`) | `ListState<SeasonalPrice>` |
 | Категорії | `/categories` | `CategoriesPage` → `CategoryCard` (`@key`, `OnSelected`) | `ListState<Category>` |
 | Мої підписки | `/subscriptions` | `SubscriptionsPage` → `SubscriptionRow` (`@key`, `OnToggled`), `SubscribeFormComponent` (`OnSubmitted`) | `ListState<Subscription>` |
+| Керування каталогом (лише `Admin`) | `/admin` | `AdminPage` → `AdminCategoriesPanel`, `AdminProductsPanel`, `AdminPricesPanel` (форма додавання/зміни, видалення з підтвердженням, `@key`) | власний стан панелі, `IAdminApi` |
 
 Кожен екран має чотири стани: завантаження, помилка (з кнопкою повтору), порожній, з даними.
+
+### Екрани адміністратора
+
+Сторінка `/admin` доступна лише ролі `Admin` (посилання в верхній панелі теж видиме лише їй; сервер усе одно перевіряє роль політикою
+`ManageCatalogue`). Три вкладки працюють з наявними endpoint-ами API: категорії (`/api/categories`), товари (`/api/products`) і
+ціни за місяцями (`/api/prices`). Після збереження чи видалення список оновлюється з сервера; помилки сервера показуються
+причиною (дублікат або пов'язані дані — 409, невалідні поля — 400, немає ролі — 403). Зміна ціни автоматично розсилається
+SignalR-хабом підписаним на категорію клієнтам.
 
 ## Один екран двома мовами та поле для обох культур
 
@@ -50,7 +59,7 @@ Blazor WebAssembly + MudBlazor. Інтерфейс українською та �
 | Категорії | `GET/POST /api/categories`, `GET/PUT/DELETE /api/categories/{id:int}` | 200, 201 + `Location`, 204, 400, 404, 409 (дубль назви; видалення категорії з товарами) |
 | Товари | `/api/products` (фільтр `?categoryId=`) | 200, 201, 204, 400, 404, 409 |
 | Ціни за місяць | `/api/prices` (фільтр `?productId=`) | 200, 201, 204, 400, 404, 409 (дубль «товар + місяць») |
-| Підписки | `/api/subscriptions` (фільтр `?email=`) | 200, 201, 204, 400, 404, 409 (дубль «e-mail + категорія») |
+| Підписки (лише власні, за `oid` з токена) | `/api/subscriptions` (фільтр `?email=`) | 200, 201, 204, 400, 404 (також чужа підписка), 409 (дубль «користувач + категорія») |
 
 - Кожна відповідь з помилкою має тіло `ProblemDetails` (`application/problem+json`); 400 — `ValidationProblemDetails` з ключами полів у camelCase.
 - Повторний `PUT` знову дає 204, повторний `DELETE` — 404.

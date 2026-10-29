@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using ApiApp.Common;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -15,7 +16,7 @@ internal static class ReplaceSubscription
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static async Task<Results<NoContent, ValidationProblem, ProblemHttpResult>> Handle(int id, ReplaceSubscriptionRequest request, AppDbContext db, CancellationToken ct)
+    private static async Task<Results<NoContent, ValidationProblem, ProblemHttpResult>> Handle(int id, ReplaceSubscriptionRequest request, ClaimsPrincipal user, AppDbContext db, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .Email(nameof(request.Email), request.Email)
@@ -27,7 +28,8 @@ internal static class ReplaceSubscription
             return errors.ToResult();
         }
 
-        var entity = await db.Subscriptions.FirstOrDefaultAsync(s => s.Id == id, ct);
+        var owner = user.OwnerId()!;
+        var entity = await db.Subscriptions.FirstOrDefaultAsync(s => s.Id == id && s.OwnerId == owner, ct);
         if (entity is null)
         {
             return Problems.NotFound($"Subscription {id} was not found.");
@@ -49,7 +51,7 @@ internal static class ReplaceSubscription
         }
         catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.UniqueViolation))
         {
-            return Problems.Conflict("This e-mail is already subscribed to this category.");
+            return Problems.Conflict("You are already subscribed to this category.");
         }
         catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.ForeignKeyViolation))
         {

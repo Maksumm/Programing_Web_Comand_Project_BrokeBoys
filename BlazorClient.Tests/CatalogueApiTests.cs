@@ -96,6 +96,98 @@ namespace BlazorClient.Tests
             Assert.Empty(await api.GetCalendarAsync());
         }
 
+        [Theory]
+        [InlineData("uk-UA", "Дуб")]
+        [InlineData("en-US", "Oak")]
+        public async Task GetProducts_UsesTheSelectedCulture_AndOrdersById(string culture, string firstName)
+        {
+            using var scope = new CultureScope(culture);
+            var (api, handler, lease) = Create(_ => Json(new[]
+            {
+                new { id = 9, categoryId = 2, nameUk = "Шина", nameEn = "Tire" },
+                new { id = 5, categoryId = 1, nameUk = "Дуб", nameEn = "Oak" }
+            }));
+            await using var leaseScope = lease;
+
+            var products = (await api.GetProductsAsync()).ToList();
+
+            Assert.Equal(new[] { 5, 9 }, products.Select(p => p.Id));
+            Assert.Equal(firstName, products[0].Name);
+            Assert.Equal(1, products[0].CategoryId);
+            Assert.Equal("/api/products", handler.Requests.Single().Path);
+        }
+
+        [Fact]
+        public async Task GetCalendar_ForAProduct_LoadsThatProductsPrices()
+        {
+            using var scope = new CultureScope("en-US");
+            var (api, handler, lease) = Create(request => request.RequestUri!.AbsolutePath switch
+            {
+                "/api/products/7" => Json(new { id = 7, categoryId = 3, nameUk = "Шина", nameEn = "Tire" }),
+                "/api/prices" => Json(new[] { new { id = 1, productId = 7, month = 4, price = 99m } }),
+                _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+            });
+            await using var leaseScope = lease;
+
+            var price = Assert.Single(await api.GetCalendarAsync(7));
+
+            Assert.Equal(7, price.ProductId);
+            Assert.Equal(3, price.CategoryId);
+            Assert.Equal("Tire", price.Name);
+            Assert.Equal(4, price.MonthNumber);
+            Assert.Contains(handler.Requests, r => r.Path == "/api/prices?productId=7");
+        }
+
+        [Fact]
+        public async Task SubscribeToCategory_PostsTheCategoryIdAndEmail()
+        {
+            using var scope = new CultureScope("en-US");
+            var (api, handler, lease) = Create(request => request.Method == HttpMethod.Get
+                ? Json(Categories)
+                : Json(new { id = 11, email = "me@example.com", categoryId = 1, threshold = (decimal?)null, isActive = true }, HttpStatusCode.Created));
+            await using var leaseScope = lease;
+
+            var result = await api.SubscribeToCategoryAsync(1, " me@example.com ");
+
+            Assert.True(result.Succeeded);
+            Assert.Equal(11, result.Value!.Id);
+            Assert.Equal("Firewood", result.Value.CategoryName);
+            var post = handler.Requests.Single(r => r.Method == HttpMethod.Post);
+            Assert.Equal("/api/subscriptions", post.Path);
+            Assert.Contains("\"categoryId\":1", post.Body);
+            Assert.Contains("\"email\":\"me@example.com\"", post.Body);
+        }
+
+        [Fact]
+        public async Task SubscribeToCategory_WithUnknownCategory_FailsWithoutPosting()
+        {
+            var (api, handler, lease) = Create(_ => Json(Categories));
+            await using var leaseScope = lease;
+
+            var result = await api.SubscribeToCategoryAsync(99, "me@example.com");
+
+            Assert.False(result.Succeeded);
+            Assert.Equal("ErrorCategoryNotFound", result.ErrorKey);
+            Assert.DoesNotContain(handler.Requests, r => r.Method == HttpMethod.Post);
+        }
+
+        [Theory]
+        [InlineData(HttpStatusCode.Conflict, "ErrorSubscriptionExists")]
+        [InlineData(HttpStatusCode.Forbidden, "ErrorForbidden")]
+        [InlineData(HttpStatusCode.Unauthorized, "ErrorSignInRequired")]
+        public async Task SubscribeToCategory_MapsServerErrorsToMessageKeys(HttpStatusCode status, string key)
+        {
+            var (api, _, lease) = Create(request => request.Method == HttpMethod.Get
+                ? Json(Categories)
+                : new HttpResponseMessage(status));
+            await using var leaseScope = lease;
+
+            var result = await api.SubscribeToCategoryAsync(1, "me@example.com");
+
+            Assert.False(result.Succeeded);
+            Assert.Equal(key, result.ErrorKey);
+        }
+
         [Fact]
         public async Task GetSubscriptions_ResolvesCategoryName()
         {

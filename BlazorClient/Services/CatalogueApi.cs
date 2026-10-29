@@ -49,11 +49,23 @@ namespace BlazorClient.Services
         {
             var products = await GetAsync<ProductDto[]>("api/products");
             var product = products.OrderBy(p => p.Id).FirstOrDefault();
-            if (product is null)
-            {
-                return new List<SeasonalPrice>();
-            }
+            return product is null ? new List<SeasonalPrice>() : await LoadPricesAsync(product);
+        }
 
+        public async Task<IEnumerable<SeasonalPrice>> GetCalendarAsync(int productId) =>
+            await LoadPricesAsync(await GetAsync<ProductDto>($"api/products/{productId}"));
+
+        public async Task<IEnumerable<ProductOption>> GetProductsAsync()
+        {
+            var products = await GetAsync<ProductDto[]>("api/products");
+            return products
+                .OrderBy(p => p.Id)
+                .Select(p => new ProductOption(p.Id, p.CategoryId, Pick(p.NameUk, p.NameEn)))
+                .ToList();
+        }
+
+        private async Task<List<SeasonalPrice>> LoadPricesAsync(ProductDto product)
+        {
             var name = Pick(product.NameUk, product.NameEn);
             var prices = await GetAsync<PriceDto[]>($"api/prices?productId={product.Id}");
             return prices
@@ -62,6 +74,7 @@ namespace BlazorClient.Services
                 .Select(p => new SeasonalPrice
                 {
                     Id = p.Id,
+                    ProductId = product.Id,
                     Name = name,
                     Price = p.Price,
                     MonthNumber = p.Month,
@@ -89,32 +102,47 @@ namespace BlazorClient.Services
             return subscriptions.Select(s => ToModel(s, categories)).ToList();
         }
 
-        public async Task<ApiResult<Subscription>> CreateSubscriptionAsync(SubscribeFormModel form)
+        public Task<ApiResult<Subscription>> CreateSubscriptionAsync(SubscribeFormModel form) => GuardAsync(async () =>
+        {
+            var categories = await GetAsync<CategoryDto[]>("api/categories");
+            var match = categories.FirstOrDefault(c => Same(c.NameUk, form.Category) || Same(c.NameEn, form.Category));
+            return match is null
+                ? ApiResult<Subscription>.Fail("ErrorCategoryNotFound")
+                : await PostSubscriptionAsync(categories, match.Id, form.Email, form.Threshold);
+        });
+
+        public Task<ApiResult<Subscription>> SubscribeToCategoryAsync(int categoryId, string email, decimal? threshold = null) => GuardAsync(async () =>
+        {
+            var categories = await GetAsync<CategoryDto[]>("api/categories");
+            return categories.Any(c => c.Id == categoryId)
+                ? await PostSubscriptionAsync(categories, categoryId, email, threshold)
+                : ApiResult<Subscription>.Fail("ErrorCategoryNotFound");
+        });
+
+        private async Task<ApiResult<Subscription>> PostSubscriptionAsync(CategoryDto[] categories, int categoryId, string email, decimal? threshold)
+        {
+            var response = await _http.PostAsJsonAsync("api/subscriptions", new
+            {
+                email = email.Trim(),
+                categoryId,
+                threshold,
+                isActive = true
+            });
+            if (response.StatusCode != HttpStatusCode.Created)
+            {
+                return ApiResult<Subscription>.Fail(ErrorKey(response.StatusCode));
+            }
+
+            var dto = await response.Content.ReadFromJsonAsync<SubscriptionDto>()
+                ?? throw new InvalidOperationException("Empty response after creating a subscription.");
+            return ApiResult<Subscription>.Ok(ToModel(dto, categories.ToDictionary(c => c.Id)));
+        }
+
+        private static async Task<ApiResult<Subscription>> GuardAsync(Func<Task<ApiResult<Subscription>>> action)
         {
             try
             {
-                var categories = await GetAsync<CategoryDto[]>("api/categories");
-                var match = categories.FirstOrDefault(c => Same(c.NameUk, form.Category) || Same(c.NameEn, form.Category));
-                if (match is null)
-                {
-                    return ApiResult<Subscription>.Fail("ErrorCategoryNotFound");
-                }
-
-                var response = await _http.PostAsJsonAsync("api/subscriptions", new
-                {
-                    email = form.Email.Trim(),
-                    categoryId = match.Id,
-                    threshold = form.Threshold,
-                    isActive = true
-                });
-                if (response.StatusCode != HttpStatusCode.Created)
-                {
-                    return ApiResult<Subscription>.Fail(ErrorKey(response.StatusCode));
-                }
-
-                var dto = await response.Content.ReadFromJsonAsync<SubscriptionDto>()
-                    ?? throw new InvalidOperationException("Empty response after creating a subscription.");
-                return ApiResult<Subscription>.Ok(ToModel(dto, categories.ToDictionary(c => c.Id)));
+                return await action();
             }
             catch (AccessTokenNotAvailableException)
             {

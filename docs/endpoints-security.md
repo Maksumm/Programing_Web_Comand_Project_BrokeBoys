@@ -19,6 +19,8 @@ API перевіряє **access-токен Microsoft Entra ID** (`Authorization:
 | `/api/prices`, `/api/prices/{id}` | GET | `access_as_user` | — | 401 | 403 | — |
 | `/api/prices`, `/api/prices/{id}` | POST, PUT, DELETE | `access_as_user` | **Admin** | 401 | 403 | 403 |
 | `/api/subscriptions`, `/api/subscriptions/{id}` | GET, POST, PUT, DELETE | `access_as_user` | **Subscriber** | 401 | 403 | 403 |
+
+Підписки **персональні**: сервер бере власника з claim `oid` токена (або `sub`) і показує/змінює лише підписки цього користувача. Чужа підписка відповідає `404`, як відсутня. Токен без `oid` і `sub` отримує `403`.
 | `/openapi/v1.json` (лише Development) | GET | — | — | відкритий | — | — |
 
 ## Інші випадки з кодом 401

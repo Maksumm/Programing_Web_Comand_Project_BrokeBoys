@@ -67,6 +67,7 @@ internal static class EntraAuthentication
             .AddPolicy(Policies.ManageSubscriptions, policy => policy
                 .RequireAuthenticatedUser()
                 .RequireAssertion(HasScope)
+                .RequireAssertion(context => context.User.OwnerId() is not null)
                 .RequireRole(Policies.SubscriberRole));
 
         return services;

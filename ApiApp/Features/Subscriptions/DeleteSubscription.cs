@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using ApiApp.Common;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -12,9 +13,10 @@ internal static class DeleteSubscription
             .WithName("DeleteSubscription")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-    private static async Task<Results<NoContent, ProblemHttpResult>> Handle(int id, AppDbContext db, CancellationToken ct)
+    private static async Task<Results<NoContent, ProblemHttpResult>> Handle(int id, ClaimsPrincipal user, AppDbContext db, CancellationToken ct)
     {
-        var removed = await db.Subscriptions.Where(s => s.Id == id).ExecuteDeleteAsync(ct);
+        var owner = user.OwnerId()!;
+        var removed = await db.Subscriptions.Where(s => s.Id == id && s.OwnerId == owner).ExecuteDeleteAsync(ct);
         if (removed == 0)
         {
             return Problems.NotFound($"Subscription {id} was not found.");

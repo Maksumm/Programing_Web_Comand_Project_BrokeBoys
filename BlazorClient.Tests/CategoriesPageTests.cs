@@ -132,7 +132,7 @@ namespace BlazorClient.Tests
             cut.FindAll("button")[0].Click();
 
             var nav = ctx.Services.GetRequiredService<NavigationManager>();
-            Assert.EndsWith("/subscriptions", nav.Uri);
+            Assert.Contains("/subscriptions?category=", nav.Uri);
         }
     }
 }

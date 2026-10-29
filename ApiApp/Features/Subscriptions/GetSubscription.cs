@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using ApiApp.Common;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -12,11 +13,13 @@ internal static class GetSubscription
             .WithName("GetSubscription")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-    private static async Task<Results<Ok<SubscriptionResponse>, ProblemHttpResult>> Handle(int id, AppDbContext db, CancellationToken ct)
+    private static async Task<Results<Ok<SubscriptionResponse>, ProblemHttpResult>> Handle(int id, ClaimsPrincipal user, AppDbContext db, CancellationToken ct)
     {
+        // Чужа підписка відповідає так само, як відсутня: її існування не розкривається.
+        var owner = user.OwnerId()!;
         var item = await db.Subscriptions.AsNoTracking()
             .Include(s => s.Category)
-            .FirstOrDefaultAsync(s => s.Id == id, ct);
+            .FirstOrDefaultAsync(s => s.Id == id && s.OwnerId == owner, ct);
         if (item is null)
         {
             return Problems.NotFound($"Subscription {id} was not found.");

@@ -65,7 +65,7 @@
     private void Select(Category category)
     {
         _selectedId = category.Id;
-        Nav.NavigateTo("subscriptions");
+        Nav.NavigateTo($"subscriptions?category={category.Id}");
     }
 
     public void Dispose() => Store.Changed -= OnStoreChanged;

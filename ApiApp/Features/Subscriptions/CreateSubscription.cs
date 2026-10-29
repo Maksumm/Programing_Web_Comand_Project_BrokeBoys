@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using ApiApp.Common;
 using ApiApp.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -14,7 +15,7 @@ internal static class CreateSubscription
             .WithName("CreateSubscription")
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static async Task<Results<Created<SubscriptionResponse>, ValidationProblem, ProblemHttpResult>> Handle(CreateSubscriptionRequest request, AppDbContext db, CancellationToken ct)
+    private static async Task<Results<Created<SubscriptionResponse>, ValidationProblem, ProblemHttpResult>> Handle(CreateSubscriptionRequest request, ClaimsPrincipal user, AppDbContext db, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .Email(nameof(request.Email), request.Email)
@@ -33,6 +34,7 @@ internal static class CreateSubscription
 
         var entity = new Subscription
         {
+            OwnerId = user.OwnerId()!,
             Email = request.Email!.Trim().ToLowerInvariant(),
             CategoryId = category.Id,
             Threshold = request.Threshold,
@@ -45,7 +47,7 @@ internal static class CreateSubscription
         }
         catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.UniqueViolation))
         {
-            return Problems.Conflict("This e-mail is already subscribed to this category.");
+            return Problems.Conflict("You are already subscribed to this category.");
         }
         catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.ForeignKeyViolation))
         {

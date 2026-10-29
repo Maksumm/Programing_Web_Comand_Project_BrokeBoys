@@ -36,6 +36,21 @@ a, .btn-link {
     color: red;
 }
 
+.app-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.23);
+    border-radius: 4px;
+    background-color: #fff;
+    color: inherit;
+    font: inherit;
+}
+
+    .app-select:focus {
+        outline: 2px solid #1E3A2B;
+        border-color: transparent;
+    }
+
 #blazor-error-ui {
     color-scheme: light only;
     background: lightyellow;
@@ -111,4 +126,61 @@ code {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
+}
+.admin-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.admin-tab {
+    padding: 8px 20px;
+    border: 0;
+    border-radius: 20px;
+    background-color: rgba(30, 58, 43, 0.08);
+    color: #1E3A2B;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+    .admin-tab.active {
+        background-color: #1E3A2B;
+        color: #fff;
+    }
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .admin-table th,
+    .admin-table td {
+        padding: 10px 8px;
+        text-align: left;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .admin-table th {
+        color: #666;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+.admin-action {
+    margin-right: 8px;
+    padding: 4px 12px;
+    border: 1px solid rgba(30, 58, 43, 0.4);
+    border-radius: 14px;
+    background: transparent;
+    color: #1E3A2B;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.admin-action-danger {
+    border-color: rgba(176, 0, 32, 0.5);
+    color: #B00020;
 }
