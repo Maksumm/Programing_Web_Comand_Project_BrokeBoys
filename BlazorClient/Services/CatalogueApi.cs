@@ -40,6 +40,7 @@ namespace BlazorClient.Services
                 Id = c.Id,
                 Name = Pick(c.NameUk, c.NameEn),
                 Description = Pick(c.DescriptionUk, c.DescriptionEn),
+                ProductsCount = c.ProductsCount,
                 SubscriptionsCount = c.SubscriptionsCount
             }).ToList();
         }

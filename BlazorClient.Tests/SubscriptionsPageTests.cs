@@ -44,6 +44,19 @@ namespace BlazorClient.Tests
         }
 
         [Fact]
+        public async Task ErrorState_ShowsTheRealReason_AndHttpStatus()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            ctx.AddState<Subscription>().SetError("ErrorServerFailure", 500);
+
+            var cut = ctx.Render<SubscriptionsPage>();
+
+            var text = TestHelpers.Text(cut.Markup);
+            Assert.Contains(ctx.Localizer()["ErrorServerFailure"].Value, text);
+            Assert.Contains("HTTP 500", text);
+        }
+
+        [Fact]
         public async Task EmptyState_ShowsEmptyMessage_AndKeepsFormAvailable()
         {
             await using var ctx = TestHelpers.CreateContext();

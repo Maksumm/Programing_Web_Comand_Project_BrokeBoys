@@ -109,4 +109,13 @@
 	<data name="ErrorSignInRequired" xml:space="preserve"><value>Your session has ended. Please sign in again.</value></data>
 	<data name="ErrorForbidden" xml:space="preserve"><value>You do not have permission to do this.</value></data>
 	<data name="LiveUpdates" xml:space="preserve"><value>Live</value></data>
+	<data name="LoadingCategories" xml:space="preserve"><value>Loading categories...</value></data>
+	<data name="CategoriesEmptyHint" xml:space="preserve"><value>An administrator has not added any categories yet.</value></data>
+	<data name="CategoriesSubtitle" xml:space="preserve"><value>Pick a category to follow its price changes</value></data>
+	<data name="ProductsLabel" xml:space="preserve"><value>Products</value></data>
+	<data name="SubscriptionsLabel" xml:space="preserve"><value>Subscriptions</value></data>
+	<data name="HttpStatus" xml:space="preserve"><value>HTTP {0}</value></data>
+	<data name="ErrorServerFailure" xml:space="preserve"><value>The server could not handle the request. Check the API log.</value></data>
+	<data name="ErrorCannotReachApi" xml:space="preserve"><value>Could not reach the API. Check that it is running, the ApiBaseUrl value and CORS.</value></data>
+	<data name="ErrorUnexpectedResponse" xml:space="preserve"><value>The API returned an unexpected response. Check ApiBaseUrl in wwwroot/appsettings.json.</value></data>
 </root>

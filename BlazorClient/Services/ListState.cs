@@ -20,20 +20,30 @@ namespace BlazorClient.Services
 
         public IReadOnlyList<T> Items { get; private set; } = Array.Empty<T>();
 
+        /// <summary>Ключ .resx з причиною останньої помилки (<c>null</c>, якщо причина невідома).</summary>
+        public string? ErrorKey { get; private set; }
+
+        /// <summary>Код HTTP останньої помилки, якщо сервер відповів.</summary>
+        public int? ErrorStatus { get; private set; }
+
         public event Action? Changed;
 
         public void SetLoading()
         {
             _initialized = true;
             Items = Array.Empty<T>();
+            ErrorKey = null;
+            ErrorStatus = null;
             State = ViewState.Loading;
             Changed?.Invoke();
         }
 
-        public void SetError()
+        public void SetError(string? errorKey = null, int? status = null)
         {
             _initialized = true;
             Items = Array.Empty<T>();
+            ErrorKey = errorKey;
+            ErrorStatus = status;
             State = ViewState.Error;
             Changed?.Invoke();
         }
@@ -43,6 +53,8 @@ namespace BlazorClient.Services
             _initialized = true;
             var list = items.ToList();
             Items = list;
+            ErrorKey = null;
+            ErrorStatus = null;
             State = list.Count == 0 ? ViewState.Empty : ViewState.Success;
             Changed?.Invoke();
         }
@@ -92,9 +104,10 @@ namespace BlazorClient.Services
             {
                 SetItems(await loader());
             }
-            catch
+            catch (Exception exception)
             {
-                SetError();
+                var failure = ApiErrors.Describe(exception);
+                SetError(failure.Key, failure.Status);
             }
         }
     }

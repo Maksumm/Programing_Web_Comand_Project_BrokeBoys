@@ -1,0 +1,73 @@
+<MudPaper Class="@Classes" Style="border-radius: 16px; background-color: white;" Elevation="0">
+    @if (Loading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" Class="mb-4" />
+    }
+    else if (!string.IsNullOrEmpty(Icon))
+    {
+        <MudAvatar Style="background-color: #D1E2D9; color: #1E3A2B; width: 64px; height: 64px;" Class="mb-4">
+            <MudIcon Icon="@Icon" Size="Size.Large" />
+        </MudAvatar>
+    }
+
+    <MudText Typo="@(Loading ? Typo.h6 : Typo.h5)" Class="fw-bold mb-2">@Title</MudText>
+
+    @if (!string.IsNullOrEmpty(ShownMessage))
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">@ShownMessage</MudText>
+    }
+
+    @if (!string.IsNullOrEmpty(ShownCaption))
+    {
+        <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">@ShownCaption</MudText>
+    }
+
+    @if (OnAction.HasDelegate)
+    {
+        <MudButton Variant="Variant.Filled"
+                   Style="background-color: #1E3A2B; color: white; border-radius: 20px; text-transform: none;"
+                   Class="px-6 mt-4"
+                   OnClick="Act">
+            @ActionText
+        </MudButton>
+    }
+
+    @ChildContent
+</MudPaper>
+
+@code {
+    /// <summary>Показує спінер замість значка (стан «завантаження»).</summary>
+    [Parameter] public bool Loading { get; set; }
+
+    [Parameter] public string? Icon { get; set; }
+
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    /// <summary>Пояснення під заголовком. Якщо задано <see cref="ErrorKey"/>, замість нього показується причина помилки.</summary>
+    [Parameter] public string? Message { get; set; }
+
+    /// <summary>Ключ .resx із причиною помилки (з <c>ListState.ErrorKey</c>).</summary>
+    [Parameter] public string? ErrorKey { get; set; }
+
+    /// <summary>Код HTTP помилки (з <c>ListState.ErrorStatus</c>); показується дрібним рядком «HTTP 401».</summary>
+    [Parameter] public int? ErrorStatus { get; set; }
+
+    [Parameter] public string? Caption { get; set; }
+
+    [Parameter] public string? ActionText { get; set; }
+
+    [Parameter] public EventCallback OnAction { get; set; }
+
+    /// <summary>Додатковий CSS-клас (наприклад, <c>error-state</c>, <c>empty-state</c>).</summary>
+    [Parameter] public string? CssClass { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string Classes => string.IsNullOrEmpty(CssClass) ? "pa-12 text-center my-4" : $"pa-12 text-center my-4 {CssClass}";
+
+    private string? ShownMessage => ErrorKey is null ? Message : L[ErrorKey].Value;
+
+    private string? ShownCaption => Caption ?? (ErrorStatus is int status ? L["HttpStatus", status].Value : null);
+
+    private Task Act() => OnAction.InvokeAsync();
+}

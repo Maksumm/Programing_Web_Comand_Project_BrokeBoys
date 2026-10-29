@@ -17,15 +17,13 @@
         break;
 
     case ViewState.Error:
-        <MudPaper Class="pa-12 text-center my-4" Style="border-radius: 16px; background-color: white;" Elevation="0">
-            <MudAvatar Style="background-color: #D1E2D9; color: #1E3A2B; width: 64px; height: 64px;" Class="mb-4">
-                <MudIcon Icon="@Icons.Material.Filled.PriorityHigh" Size="Size.Large" />
-            </MudAvatar>
-            <MudText Typo="Typo.h5" Class="fw-bold mb-2">@L["ErrorLoading"]</MudText>
-            <MudButton Variant="Variant.Filled" Style="background-color: #1E3A2B; color: white; border-radius: 20px;" Class="mt-4" OnClick="Retry">
-                @L["TryAgain"]
-            </MudButton>
-        </MudPaper>
+        <StateCard CssClass="error-state"
+                   Icon="@Icons.Material.Filled.PriorityHigh"
+                   Title="@L["ErrorLoading"]"
+                   ErrorKey="@Store.ErrorKey"
+                   ErrorStatus="@Store.ErrorStatus"
+                   ActionText="@L["TryAgain"]"
+                   OnAction="Retry" />
         break;
 
     default:

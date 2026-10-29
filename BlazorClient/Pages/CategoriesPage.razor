@@ -6,40 +6,48 @@
 @inject ICatalogueApi Api
 @inject NavigationManager Nav
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-    <MudText Typo="Typo.h4" Class="mb-4">@L["CategoriesTitle"]</MudText>
+@switch (Store.State)
+{
+    case ViewState.Loading:
+        <StateCard Loading="true" Title="@L["LoadingCategories"]" Message="@L["TakesFewSeconds"]" />
+        break;
 
-    @switch (Store.State)
-    {
-        case ViewState.Loading:
-            <div class="d-flex justify-center my-8">
-                <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
-            </div>
-            break;
+    case ViewState.Error:
+        <StateCard CssClass="error-state"
+                   Icon="@Icons.Material.Filled.PriorityHigh"
+                   Title="@L["ErrorLoadingCategories"]"
+                   Message="@L["CheckInternetAndTryAgain"]"
+                   ErrorKey="@Store.ErrorKey"
+                   ErrorStatus="@Store.ErrorStatus"
+                   ActionText="@L["TryAgain"]"
+                   OnAction="Retry" />
+        break;
 
-        case ViewState.Error:
-            <div class="error-state">@L["ErrorLoadingCategories"]</div>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="Retry">@L["TryAgain"]</MudButton>
-            break;
+    case ViewState.Empty:
+        <StateCard CssClass="empty-state"
+                   Icon="@Icons.Material.Filled.Category"
+                   Title="@L["CategoriesYetEmpty"]"
+                   Message="@L["CategoriesEmptyHint"]" />
+        break;
 
-        case ViewState.Empty:
-            <div class="empty-state">@L["CategoriesYetEmpty"]</div>
-            break;
+    default:
+        <div class="mb-6">
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">@L["CategoriesSubtitle"]</MudText>
+            <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #1E3A2B;">@L["CategoriesTitle"]</MudText>
+        </div>
 
-        default:
-            <MudGrid>
-                @foreach (var category in Store.Items)
-                {
-                    <MudItem xs="12" sm="6" md="4" @key="category.Id">
-                        <CategoryCard Category="category"
-                                      IsSelected="@(_selectedId == category.Id)"
-                                      OnSelected="Select" />
-                    </MudItem>
-                }
-            </MudGrid>
-            break;
-    }
-</MudContainer>
+        <MudGrid>
+            @foreach (var category in Store.Items)
+            {
+                <MudItem xs="12" sm="6" md="4" @key="category.Id">
+                    <CategoryCard Category="category"
+                                  IsSelected="@(_selectedId == category.Id)"
+                                  OnSelected="Select" />
+                </MudItem>
+            }
+        </MudGrid>
+        break;
+}
 
 @code {
     private int? _selectedId;
