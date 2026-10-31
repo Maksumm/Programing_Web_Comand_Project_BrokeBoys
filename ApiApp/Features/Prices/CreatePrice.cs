@@ -28,11 +28,11 @@ internal static class CreatePrice
             return errors.ToResult();
         }
 
-        var categoryId = await db.Products.AsNoTracking()
+        var product = await db.Products.AsNoTracking()
             .Where(p => p.Id == request.ProductId)
-            .Select(p => (int?)p.CategoryId)
+            .Select(p => new ProductRef(p.Id, p.CategoryId, p.NameUk, p.NameEn))
             .FirstOrDefaultAsync(ct);
-        if (categoryId is null)
+        if (product is null)
         {
             return Problems.Invalid(nameof(request.ProductId), "Product does not exist.");
         }
@@ -57,7 +57,7 @@ internal static class CreatePrice
             return Problems.Invalid("ProductId", "Product does not exist.");
         }
 
-        await notifier.NotifyAsync("Created", entity.ProductId, entity.Month, entity.Price, [categoryId.Value], ct);
+        await notifier.NotifyAsync("Created", product, entity.Month, entity.Price, [product.CategoryId], ct);
         return TypedResults.Created($"/api/prices/{entity.Id}", PriceResponse.From(entity));
     }
 }

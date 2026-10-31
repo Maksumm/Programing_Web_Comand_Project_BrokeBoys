@@ -1,5 +1,6 @@
 using ApiApp.Common;
 using ApiApp.Data;
+using ApiApp.Realtime;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,7 +17,7 @@ internal static class ReplaceProduct
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static async Task<Results<NoContent, ValidationProblem, ProblemHttpResult>> Handle(int id, ReplaceProductRequest request, AppDbContext db, CancellationToken ct)
+    private static async Task<Results<NoContent, ValidationProblem, ProblemHttpResult>> Handle(int id, ReplaceProductRequest request, AppDbContext db, ICatalogueNotifier notifier, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .RequiredId(nameof(request.CategoryId), request.CategoryId)
@@ -38,9 +39,13 @@ internal static class ReplaceProduct
             return Problems.Invalid(nameof(request.CategoryId), "Category does not exist.");
         }
 
+        var oldCategoryId = entity.CategoryId;
         entity.CategoryId = request.CategoryId!.Value;
         entity.NameUk = request.NameUk!.Trim();
         entity.NameEn = request.NameEn!.Trim();
+
+        // Повторний PUT з тими самими значеннями нічого не змінює — і нічого не розсилає.
+        var changed = db.ChangeTracker.HasChanges();
         try
         {
             await db.SaveChangesAsync(ct);
@@ -52,6 +57,12 @@ internal static class ReplaceProduct
         catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.ForeignKeyViolation))
         {
             return Problems.Invalid("CategoryId", "Category does not exist.");
+        }
+
+        if (changed)
+        {
+            // Товар міг перейти до іншої категорії: повідомляємо обидві.
+            await notifier.NotifyProductAsync("Updated", new ProductRef(entity.Id, entity.CategoryId, entity.NameUk, entity.NameEn), [oldCategoryId, entity.CategoryId], ct);
         }
 
         return TypedResults.NoContent();

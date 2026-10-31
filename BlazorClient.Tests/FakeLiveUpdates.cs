@@ -8,6 +8,8 @@ namespace BlazorClient.Tests
     {
         public event Action<PriceChanged>? PriceChanged;
 
+        public event Action<CatalogueChanged>? CatalogueChanged;
+
         public event Action? StateChanged;
 
         public bool IsLive { get; private set; }
@@ -23,5 +25,7 @@ namespace BlazorClient.Tests
         }
 
         public void Raise(PriceChanged change) => PriceChanged?.Invoke(change);
+
+        public void Raise(CatalogueChanged change) => CatalogueChanged?.Invoke(change);
     }
 }

@@ -35,11 +35,11 @@ internal static class ReplacePrice
             return Problems.NotFound($"Price {id} was not found.");
         }
 
-        var newCategoryId = await db.Products.AsNoTracking()
+        var newProduct = await db.Products.AsNoTracking()
             .Where(p => p.Id == request.ProductId)
-            .Select(p => (int?)p.CategoryId)
+            .Select(p => new ProductRef(p.Id, p.CategoryId, p.NameUk, p.NameEn))
             .FirstOrDefaultAsync(ct);
-        if (newCategoryId is null)
+        if (newProduct is null)
         {
             return Problems.Invalid(nameof(request.ProductId), "Product does not exist.");
         }
@@ -67,7 +67,7 @@ internal static class ReplacePrice
         if (changed)
         {
             // Ціна могла перейти до товару іншої категорії: повідомляємо обидві категорії.
-            await notifier.NotifyAsync("Updated", entity.ProductId, entity.Month, entity.Price, [oldCategoryId, newCategoryId.Value], ct);
+            await notifier.NotifyAsync("Updated", newProduct, entity.Month, entity.Price, [oldCategoryId, newProduct.CategoryId], ct);
         }
 
         return TypedResults.NoContent();

@@ -1,5 +1,6 @@
 using ApiApp.Common;
 using ApiApp.Data;
+using ApiApp.Realtime;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,7 +17,7 @@ internal static class ReplaceCategory
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static async Task<Results<NoContent, ValidationProblem, ProblemHttpResult>> Handle(int id, ReplaceCategoryRequest request, AppDbContext db, CancellationToken ct)
+    private static async Task<Results<NoContent, ValidationProblem, ProblemHttpResult>> Handle(int id, ReplaceCategoryRequest request, AppDbContext db, ICatalogueNotifier notifier, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .RequiredText(nameof(request.NameUk), request.NameUk)
@@ -38,6 +39,9 @@ internal static class ReplaceCategory
         entity.NameEn = request.NameEn!.Trim();
         entity.DescriptionUk = request.DescriptionUk?.Trim() ?? string.Empty;
         entity.DescriptionEn = request.DescriptionEn?.Trim() ?? string.Empty;
+
+        // Повторний PUT з тими самими значеннями нічого не змінює — і нічого не розсилає.
+        var changed = db.ChangeTracker.HasChanges();
         try
         {
             await db.SaveChangesAsync(ct);
@@ -45,6 +49,11 @@ internal static class ReplaceCategory
         catch (DbUpdateException ex) when (PgErrors.Is(ex, PgErrors.UniqueViolation))
         {
             return Problems.Conflict("Another category already has this name.");
+        }
+
+        if (changed)
+        {
+            await notifier.NotifyCategoryAsync("Updated", entity.Id, entity.NameUk, entity.NameEn, ct);
         }
 
         return TypedResults.NoContent();

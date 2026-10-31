@@ -12,6 +12,12 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Error, Message = "Broadcasting a price change for product {ProductId} failed")]
     public static partial void BroadcastFailed(ILogger logger, Exception exception, int productId);
 
+    [LoggerMessage(Level = LogLevel.Information, Message = "Catalogue change {Entity} {Kind} sent to {GroupCount} group(s)")]
+    public static partial void CatalogueBroadcast(ILogger logger, string entity, string kind, int groupCount);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Broadcasting a catalogue change ({Entity}) failed")]
+    public static partial void CatalogueBroadcastFailed(ILogger logger, Exception exception, string entity);
+
     [LoggerMessage(Level = LogLevel.Debug, Message = "Connection {ConnectionId} joined the group of category {CategoryId}")]
     public static partial void GroupJoined(ILogger logger, string connectionId, int categoryId);
 

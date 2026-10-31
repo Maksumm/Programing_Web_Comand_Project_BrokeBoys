@@ -1,0 +1,101 @@
+@using System.Globalization
+@implements IDisposable
+@inject ILiveUpdates Live
+@inject IToastService Toasts
+@inject ListState<Subscription> Subscriptions
+@inject ICatalogueApi Api
+@inject CurrentUserState User
+
+@* Невидимий компонент: показує тости про зміни в категоріях, на які підписаний користувач, на будь-якому екрані. *@
+
+@code {
+    private static readonly string[] MonthKeys =
+        { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+    private readonly HashSet<int> _followed = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Live.PriceChanged += OnPriceChanged;
+        Live.CatalogueChanged += OnCatalogueChanged;
+
+        // subscriptions are only available to subscribers; for anyone else there is nothing to follow
+        if (!await User.IsInRoleAsync("Subscriber"))
+        {
+            return;
+        }
+
+        Subscriptions.Changed += OnSubscriptionsChanged;
+        await Subscriptions.EnsureLoadedAsync(Api.GetSubscriptionsAsync);
+        await FollowAsync();
+    }
+
+    private void OnSubscriptionsChanged() => _ = InvokeAsync(FollowAsync);
+
+    /// <summary>Стежимо за категоріями активних підписок: приєднуємося до їхніх груп і лише про них показуємо тости.</summary>
+    private async Task FollowAsync()
+    {
+        var active = Subscriptions.Items.Where(s => s.IsActive).Select(s => s.CategoryId).ToHashSet();
+        _followed.Clear();
+        _followed.UnionWith(active);
+
+        foreach (var categoryId in active)
+        {
+            await Live.JoinCategoryAsync(categoryId);
+        }
+    }
+
+    private static string DisplayName(string name, int id) => string.IsNullOrWhiteSpace(name) ? $"#{id}" : name;
+
+    private void OnPriceChanged(PriceChanged change)
+    {
+        if (!_followed.Contains(change.CategoryId) || change.Month is < 1 or > 12)
+        {
+            return;
+        }
+
+        var product = DisplayName(change.ProductName, change.ProductId);
+        var month = L["Month_" + MonthKeys[change.Month - 1]].Value;
+
+        if (change.Kind == "Deleted")
+        {
+            Toasts.Info(L["ToastPriceDeleted", product, month].Value);
+            return;
+        }
+
+        var price = change.Price?.ToString("0.##", CultureInfo.CurrentCulture) ?? string.Empty;
+        var key = change.Kind == "Created" ? "ToastPriceCreated" : "ToastPriceUpdated";
+        Toasts.Info(L[key, product, month, price].Value);
+    }
+
+    private void OnCatalogueChanged(CatalogueChanged change)
+    {
+        if (!_followed.Contains(change.CategoryId))
+        {
+            return;
+        }
+
+        var key = (change.Entity, change.Kind) switch
+        {
+            ("Product", "Created") => "ToastProductCreated",
+            ("Product", "Deleted") => "ToastProductDeleted",
+            ("Product", _) => "ToastProductUpdated",
+            ("Category", "Deleted") => "ToastCategoryDeleted",
+            ("Category", _) => "ToastCategoryUpdated",
+            _ => null
+        };
+        if (key is null)
+        {
+            return;
+        }
+
+        Toasts.Info(L[key, DisplayName(change.Name, change.ProductId ?? change.CategoryId)].Value);
+    }
+
+    public void Dispose()
+    {
+        Live.PriceChanged -= OnPriceChanged;
+        Live.CatalogueChanged -= OnCatalogueChanged;
+        Subscriptions.Changed -= OnSubscriptionsChanged;
+    }
+}

@@ -7,6 +7,9 @@ namespace BlazorClient.Services
     {
         event Action<PriceChanged>? PriceChanged;
 
+        /// <summary>Змінився, додався чи зник товар або змінилася категорія (лише групи, до яких клієнт приєднаний).</summary>
+        event Action<CatalogueChanged>? CatalogueChanged;
+
         /// <summary>Змінилося, чи активне з'єднання (старт, обрив, повернення).</summary>
         event Action? StateChanged;
 

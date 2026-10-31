@@ -6,12 +6,12 @@ namespace ApiApp.Realtime;
 public interface IPriceNotifier
 {
     /// <summary>Повідомляє групи вказаних категорій (і лише їх) про зміну ціни. Помилка розсилки не ламає запит: дані вже збережено.</summary>
-    Task NotifyAsync(string kind, int productId, int month, decimal? price, IEnumerable<int> categoryIds, CancellationToken cancellationToken);
+    Task NotifyAsync(string kind, ProductRef product, int month, decimal? price, IEnumerable<int> categoryIds, CancellationToken cancellationToken);
 }
 
 public sealed class PriceNotifier(IHubContext<PricesHub> hub, ILogger<PriceNotifier> logger) : IPriceNotifier
 {
-    public async Task NotifyAsync(string kind, int productId, int month, decimal? price, IEnumerable<int> categoryIds, CancellationToken cancellationToken)
+    public async Task NotifyAsync(string kind, ProductRef product, int month, decimal? price, IEnumerable<int> categoryIds, CancellationToken cancellationToken)
     {
         var categories = categoryIds.Distinct().ToArray();
         if (categories.Length == 0)
@@ -22,7 +22,7 @@ public sealed class PriceNotifier(IHubContext<PricesHub> hub, ILogger<PriceNotif
         // Розсилка — окремий span: у трасі запиту видно, скільки часу вона зайняла.
         using var activity = Telemetry.Source.StartActivity("BroadcastPriceChange");
         activity?.SetTag("price.kind", kind);
-        activity?.SetTag("product.id", productId);
+        activity?.SetTag("product.id", product.Id);
         activity?.SetTag("category.ids", string.Join(",", categories));
 
         try
@@ -30,15 +30,15 @@ public sealed class PriceNotifier(IHubContext<PricesHub> hub, ILogger<PriceNotif
             foreach (var categoryId in categories)
             {
                 await hub.Clients.Groups(PricesHub.GroupName(categoryId))
-                    .SendAsync("PriceChanged", new PriceChanged(kind, categoryId, productId, month, price), cancellationToken);
+                    .SendAsync("PriceChanged", new PriceChanged(kind, categoryId, product.Id, month, price, product.NameUk, product.NameEn), cancellationToken);
             }
 
-            Log.PriceBroadcast(logger, kind, productId, categories.Length);
+            Log.PriceBroadcast(logger, kind, product.Id, categories.Length);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.Message);
-            Log.BroadcastFailed(logger, ex, productId);
+            Log.BroadcastFailed(logger, ex, product.Id);
         }
     }
 }

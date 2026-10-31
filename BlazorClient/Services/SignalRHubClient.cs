@@ -28,6 +28,8 @@ namespace BlazorClient.Services
 
         public IDisposable OnPriceChanged(Action<PriceChanged> handler) => _connection.On("PriceChanged", handler);
 
+        public IDisposable OnCatalogueChanged(Action<CatalogueChanged> handler) => _connection.On("CatalogueChanged", handler);
+
         public ValueTask DisposeAsync() => _connection.DisposeAsync();
     }
 }

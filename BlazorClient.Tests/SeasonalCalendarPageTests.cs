@@ -361,5 +361,89 @@ namespace BlazorClient.Tests
             cut.WaitForAssertion(() =>
                 Assert.Contains(ctx.Localizer()["ErrorSubscriptionExists"].Value, TestHelpers.Text(cut.Markup)), Timeout);
         }
+
+        [Fact]
+        public async Task ProductChangedInTheShownCategory_RefreshesThePickerAndTheTitle()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            var api = ctx.Services.GetRequiredService<FakeCatalogueApi>();
+            var live = ctx.Services.GetRequiredService<FakeLiveUpdates>();
+            api.Products.Add(new ProductOption(1, 1, "Старе"));
+            api.Prices.AddRange(Relative(_ => 100m, name: "Нове"));
+            ctx.AddState<SeasonalPrice>().SetItems(Relative(_ => 100m, name: "Старе"));
+
+            var cut = ctx.Render<SeasonalCalendarPage>();
+            cut.WaitForAssertion(() => Assert.Contains("Старе", cut.Find("select").TextContent), Timeout);
+
+            api.Products[0] = new ProductOption(1, 1, "Нове");
+            live.Raise(new CatalogueChanged("Product", "Updated", 1, 1, "Нове", "New"));
+
+            cut.WaitForAssertion(() =>
+            {
+                Assert.Contains("Нове", cut.Find("select").TextContent);
+                Assert.Contains("Нове", cut.Find("h4").TextContent);
+            }, Timeout);
+        }
+
+        [Fact]
+        public async Task NewProductInTheShownCategory_AppearsInThePicker()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            var api = ctx.Services.GetRequiredService<FakeCatalogueApi>();
+            var live = ctx.Services.GetRequiredService<FakeLiveUpdates>();
+            api.Products.Add(new ProductOption(1, 1, "Дрова"));
+            ctx.AddState<SeasonalPrice>().SetItems(Relative(_ => 100m));
+
+            var cut = ctx.Render<SeasonalCalendarPage>();
+            cut.WaitForAssertion(() => Assert.Single(cut.FindAll("select option")), Timeout);
+
+            api.Products.Add(new ProductOption(2, 1, "Брикети"));
+            live.Raise(new CatalogueChanged("Product", "Created", 1, 2, "Брикети", "Briquettes"));
+
+            cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("select option").Count), Timeout);
+        }
+
+        [Fact]
+        public async Task WhenTheShownProductIsDeleted_TheCalendarFallsBackToAnotherOne()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            var api = ctx.Services.GetRequiredService<FakeCatalogueApi>();
+            var live = ctx.Services.GetRequiredService<FakeLiveUpdates>();
+            api.Products.Add(new ProductOption(1, 1, "Перший"));
+            api.Products.Add(new ProductOption(2, 1, "Другий"));
+            api.Prices.AddRange(Relative(_ => 200m, productId: 2, name: "Другий"));
+            ctx.AddState<SeasonalPrice>().SetItems(Relative(_ => 100m, productId: 1, name: "Перший"));
+
+            var cut = ctx.Render<SeasonalCalendarPage>();
+            cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("select option").Count), Timeout);
+
+            api.Products.RemoveAt(0);
+            live.Raise(new CatalogueChanged("Product", "Deleted", 1, 1, "Перший", "First"));
+
+            cut.WaitForAssertion(() =>
+            {
+                Assert.Single(cut.FindAll("select option"));
+                Assert.Contains("Другий", cut.Find("h4").TextContent);
+            }, Timeout);
+        }
+
+        [Fact]
+        public async Task CatalogueChangesInAnotherCategory_AreIgnored()
+        {
+            await using var ctx = TestHelpers.CreateContext();
+            var api = ctx.Services.GetRequiredService<FakeCatalogueApi>();
+            var live = ctx.Services.GetRequiredService<FakeLiveUpdates>();
+            api.Products.Add(new ProductOption(1, 1, "Дрова"));
+            ctx.AddState<SeasonalPrice>().SetItems(Relative(_ => 100m));
+
+            var cut = ctx.Render<SeasonalCalendarPage>();
+            cut.WaitForAssertion(() => Assert.Single(cut.FindAll("select option")), Timeout);
+
+            api.Products.Add(new ProductOption(5, 2, "Шини"));
+            live.Raise(new CatalogueChanged("Product", "Created", 2, 5, "Шини", "Tires"));
+
+            Assert.Single(cut.FindAll("select option"));
+            Assert.Empty(api.RequestedProductIds);
+        }
     }
 }

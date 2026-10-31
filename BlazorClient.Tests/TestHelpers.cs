@@ -52,6 +52,10 @@ namespace BlazorClient.Tests
             var live = new FakeLiveUpdates();
             ctx.Services.AddSingleton(live);
             ctx.Services.AddSingleton<ILiveUpdates>(live);
+
+            var toaster = new FakeToaster();
+            ctx.Services.AddSingleton(toaster);
+            ctx.Services.AddSingleton<IToastService>(toaster);
             return ctx;
         }
 
