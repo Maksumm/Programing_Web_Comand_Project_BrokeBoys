@@ -30,6 +30,7 @@ telemetry.WithTracing(tracing => tracing.AddSource(Telemetry.SourceName));
 
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IPriceNotifier, PriceNotifier>();
+builder.Services.AddSingleton<ICatalogueNotifier, CatalogueNotifier>();
 builder.Services.AddOpenApi();
 
 // PostgreSQL через EF Core. Рядок підключення — ConnectionStrings:Catalogue (user-secrets / змінні середовища),

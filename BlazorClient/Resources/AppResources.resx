@@ -158,4 +158,12 @@
 	<data name="NextNotificationDropText" xml:space="preserve"><value>Очікуємо мінімум для «{0}»: ціна впаде приблизно на {1}% від сьогоднішньої.</value></data>
 	<data name="NextNotificationNoDrop" xml:space="preserve"><value>Для ваших підписок найближчим часом подешевшання не очікується.</value></data>
 	<data name="NextNotificationNoSubscriptions" xml:space="preserve"><value>Підпишіться на категорію, щоб бачити, коли чекати зниження ціни.</value></data>
+	<data name="ToastPriceCreated" xml:space="preserve"><value>«{0}»: додано ціну на {1} — {2}</value></data>
+	<data name="ToastPriceUpdated" xml:space="preserve"><value>«{0}»: ціна на {1} тепер {2}</value></data>
+	<data name="ToastPriceDeleted" xml:space="preserve"><value>«{0}»: ціну на {1} прибрано</value></data>
+	<data name="ToastProductCreated" xml:space="preserve"><value>Новий товар у категорії, яку ви відстежуєте: «{0}»</value></data>
+	<data name="ToastProductUpdated" xml:space="preserve"><value>Товар оновлено: «{0}»</value></data>
+	<data name="ToastProductDeleted" xml:space="preserve"><value>Товар прибрано: «{0}»</value></data>
+	<data name="ToastCategoryUpdated" xml:space="preserve"><value>Категорію оновлено: «{0}»</value></data>
+	<data name="ToastCategoryDeleted" xml:space="preserve"><value>Категорію видалено: «{0}»</value></data>
 </root>

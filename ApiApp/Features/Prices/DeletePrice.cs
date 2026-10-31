@@ -19,7 +19,7 @@ internal static class DeletePrice
         // Категорію й товар потрібно знати до видалення, щоб повідомити потрібну групу.
         var existing = await db.SeasonalPrices.AsNoTracking()
             .Where(p => p.Id == id)
-            .Select(p => new { p.ProductId, p.Month, CategoryId = p.Product.CategoryId })
+            .Select(p => new { p.Month, Product = new ProductRef(p.ProductId, p.Product.CategoryId, p.Product.NameUk, p.Product.NameEn) })
             .FirstOrDefaultAsync(ct);
         if (existing is null)
         {
@@ -32,7 +32,7 @@ internal static class DeletePrice
             return Problems.NotFound($"Price {id} was not found.");
         }
 
-        await notifier.NotifyAsync("Deleted", existing.ProductId, existing.Month, null, [existing.CategoryId], ct);
+        await notifier.NotifyAsync("Deleted", existing.Product, existing.Month, null, [existing.Product.CategoryId], ct);
         return TypedResults.NoContent();
     }
 }

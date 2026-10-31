@@ -225,12 +225,13 @@ else
         Store.Changed += OnStoreChanged;
         Live.StateChanged += OnStoreChanged;
         Live.PriceChanged += OnPriceChanged;
+        Live.CatalogueChanged += OnCatalogueChanged;
         await Store.EnsureLoadedAsync(LoadPrices);
         await JoinLiveAsync();
         await LoadProductsAndEmailAsync();
     }
 
-    private async Task LoadProductsAndEmailAsync()
+    private async Task LoadProductsAsync()
     {
         try
         {
@@ -241,6 +242,11 @@ else
             // the picker is optional: the calendar already shows the first product
             _products = new List<ProductOption>();
         }
+    }
+
+    private async Task LoadProductsAndEmailAsync()
+    {
+        await LoadProductsAsync();
 
         var user = await User.GetAsync();
         if (string.IsNullOrWhiteSpace(_email) && !string.IsNullOrWhiteSpace(user?.Email))
@@ -332,10 +338,38 @@ else
         await JoinLiveAsync();
     }
 
+    /// <summary>
+    /// Товар чи категорія змінилися в групі, до якої ми приєднані: оновлюємо список у вибірці, а якщо йдеться про показаний товар —
+    /// і його ціни. Якщо показаний товар видалили, переходимо до першого наявного.
+    /// </summary>
+    private void OnCatalogueChanged(CatalogueChanged change) => _ = InvokeAsync(async () =>
+    {
+        if (change.CategoryId != CurrentCategoryId)
+        {
+            return;
+        }
+
+        await LoadProductsAsync();
+
+        if (change.Entity == "Product" && change.ProductId == SelectedProductId)
+        {
+            if (change.Kind == "Deleted")
+            {
+                _productId = null;
+            }
+
+            await Store.RefreshAsync(LoadPrices);
+            await JoinLiveAsync();
+        }
+
+        StateHasChanged();
+    });
+
     public void Dispose()
     {
         Store.Changed -= OnStoreChanged;
         Live.StateChanged -= OnStoreChanged;
         Live.PriceChanged -= OnPriceChanged;
+        Live.CatalogueChanged -= OnCatalogueChanged;
     }
 }

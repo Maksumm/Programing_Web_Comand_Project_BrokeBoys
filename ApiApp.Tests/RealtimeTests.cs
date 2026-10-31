@@ -14,6 +14,12 @@ public class RealtimeTests(PostgresFixture fixture) : ApiTestBase(fixture)
 {
     private sealed record PriceChangedDto(string Kind, int CategoryId, int ProductId, int Month, decimal? Price);
 
+    private sealed record PriceNamesDto(string Kind, string ProductNameUk, string ProductNameEn);
+
+    private sealed record CatalogueChangedDto(string Entity, string Kind, int CategoryId, int? ProductId, string NameUk, string NameEn);
+
+    private sealed record IdDto(int Id);
+
     private readonly List<HubConnection> _hubs = [];
 
     public override async Task DisposeAsync()
@@ -43,11 +49,11 @@ public class RealtimeTests(PostgresFixture fixture) : ApiTestBase(fixture)
         return hub;
     }
 
-    private async Task<ConcurrentQueue<PriceChangedDto>> ConnectAsync(params int[] categoryIds)
+    private async Task<ConcurrentQueue<T>> ListenAsync<T>(string method, params int[] categoryIds)
     {
-        var inbox = new ConcurrentQueue<PriceChangedDto>();
+        var inbox = new ConcurrentQueue<T>();
         var hub = CreateHub(TestTokens.Create(roles: [TestTokens.AdminRole]));
-        hub.On<PriceChangedDto>("PriceChanged", message => inbox.Enqueue(message));
+        hub.On<T>(method, message => inbox.Enqueue(message));
         await hub.StartAsync();
         foreach (var categoryId in categoryIds)
         {
@@ -56,6 +62,12 @@ public class RealtimeTests(PostgresFixture fixture) : ApiTestBase(fixture)
 
         return inbox;
     }
+
+    private Task<ConcurrentQueue<PriceChangedDto>> ConnectAsync(params int[] categoryIds) =>
+        ListenAsync<PriceChangedDto>("PriceChanged", categoryIds);
+
+    private Task<ConcurrentQueue<CatalogueChangedDto>> ConnectCatalogueAsync(params int[] categoryIds) =>
+        ListenAsync<CatalogueChangedDto>("CatalogueChanged", categoryIds);
 
     private static async Task<bool> EventuallyAsync(Func<bool> condition)
     {
@@ -160,5 +172,143 @@ public class RealtimeTests(PostgresFixture fixture) : ApiTestBase(fixture)
         Assert.Equal("BroadcastPriceChange", span.OperationName);
         Assert.Equal("Updated", span.GetTagItem("price.kind"));
         Assert.Equal(1, span.GetTagItem("product.id"));
+    }
+
+    [Fact]
+    public async Task PriceMessages_CarryTheProductNamesInBothLanguages()
+    {
+        var inbox = await ListenAsync<PriceNamesDto>("PriceChanged", 1);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await PutPriceAsync(7, productId: 1, month: 7, price: 4242m)).StatusCode);
+
+        Assert.True(await EventuallyAsync(() => inbox.Count == 1));
+        var message = inbox.Single();
+        Assert.Equal("Колоті дрова, дуб", message.ProductNameUk);
+        Assert.Equal("Split firewood, oak", message.ProductNameEn);
+    }
+
+    [Fact]
+    public async Task NewProduct_IsAnnouncedOnlyToItsCategory()
+    {
+        var firewood = await ConnectCatalogueAsync(1);
+        var tires = await ConnectCatalogueAsync(2);
+
+        var created = await Client.PostAsJsonAsync("/api/products", new { categoryId = 1, nameUk = "Брикети", nameEn = "Briquettes" });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var id = (await created.Content.ReadFromJsonAsync<IdDto>())!.Id;
+
+        Assert.True(await EventuallyAsync(() => firewood.Count == 1));
+        Assert.Equal(new CatalogueChangedDto("Product", "Created", 1, id, "Брикети", "Briquettes"), firewood.Single());
+
+        await Task.Delay(300);
+        Assert.Empty(tires);
+    }
+
+    [Fact]
+    public async Task RenamingAProduct_SendsUpdated_AndRepeatingTheSameRequestSendsNothing()
+    {
+        var inbox = await ConnectCatalogueAsync(1);
+        var body = new { categoryId = 1, nameUk = "Дуб колотий", nameEn = "Split oak" };
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Client.PutAsJsonAsync("/api/products/1", body)).StatusCode);
+        Assert.True(await EventuallyAsync(() => inbox.Count == 1));
+        Assert.Equal(new CatalogueChangedDto("Product", "Updated", 1, 1, "Дуб колотий", "Split oak"), inbox.Single());
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Client.PutAsJsonAsync("/api/products/1", body)).StatusCode);
+
+        await Task.Delay(400);
+        Assert.Single(inbox);
+    }
+
+    [Fact]
+    public async Task MovingAProductToAnotherCategory_NotifiesBothCategories()
+    {
+        var firewood = await ConnectCatalogueAsync(1);
+        var tires = await ConnectCatalogueAsync(2);
+
+        var moved = await Client.PutAsJsonAsync("/api/products/1", new { categoryId = 2, nameUk = "Колоті дрова, дуб", nameEn = "Split firewood, oak" });
+        Assert.Equal(HttpStatusCode.NoContent, moved.StatusCode);
+
+        Assert.True(await EventuallyAsync(() => firewood.Count == 1 && tires.Count == 1));
+        Assert.Equal(1, firewood.Single().CategoryId);
+        Assert.Equal(2, tires.Single().CategoryId);
+        Assert.All(new[] { firewood.Single(), tires.Single() }, m => Assert.Equal("Updated", m.Kind));
+    }
+
+    [Fact]
+    public async Task DeletingAProduct_SendsDeleted_WithTheNamesItHadBeforeDeletion()
+    {
+        var inbox = await ConnectCatalogueAsync(3);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Client.DeleteAsync("/api/products/5")).StatusCode);
+
+        Assert.True(await EventuallyAsync(() => inbox.Count == 1));
+        Assert.Equal(new CatalogueChangedDto("Product", "Deleted", 3, 5, "Цемент М500, 25 кг", "Cement M500, 25 kg"), inbox.Single());
+    }
+
+    [Fact]
+    public async Task FailedRequests_SendNothing()
+    {
+        var inbox = await ConnectCatalogueAsync(1, 2, 3);
+
+        await (await Client.PutAsJsonAsync("/api/products/999", new { categoryId = 1, nameUk = "X", nameEn = "Y" })).AssertProblemAsync(HttpStatusCode.NotFound);
+        await (await Client.DeleteAsync("/api/products/999")).AssertProblemAsync(HttpStatusCode.NotFound);
+        await (await Client.DeleteAsync("/api/categories/999")).AssertProblemAsync(HttpStatusCode.NotFound);
+        await (await Client.PostAsJsonAsync("/api/products", new { })).AssertProblemAsync(HttpStatusCode.BadRequest);
+
+        await Task.Delay(400);
+        Assert.Empty(inbox);
+    }
+
+    [Fact]
+    public async Task RenamingACategory_SendsCategoryUpdated_AndRepeatingItSendsNothing()
+    {
+        var inbox = await ConnectCatalogueAsync(1);
+        var body = new { nameUk = "Деревина", nameEn = "Timber", descriptionUk = "Опис", descriptionEn = "Description" };
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Client.PutAsJsonAsync("/api/categories/1", body)).StatusCode);
+        Assert.True(await EventuallyAsync(() => inbox.Count == 1));
+        Assert.Equal(new CatalogueChangedDto("Category", "Updated", 1, null, "Деревина", "Timber"), inbox.Single());
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Client.PutAsJsonAsync("/api/categories/1", body)).StatusCode);
+
+        await Task.Delay(400);
+        Assert.Single(inbox);
+    }
+
+    [Fact]
+    public async Task DeletingACategory_SendsCategoryDeleted_WithItsNames()
+    {
+        var created = await Client.PostAsJsonAsync("/api/categories", new { nameUk = "Інструмент", nameEn = "Tools", descriptionUk = "Опис", descriptionEn = "Description" });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var id = (await created.Content.ReadFromJsonAsync<IdDto>())!.Id;
+        var inbox = await ConnectCatalogueAsync(id);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Client.DeleteAsync($"/api/categories/{id}")).StatusCode);
+
+        Assert.True(await EventuallyAsync(() => inbox.Count == 1));
+        Assert.Equal(new CatalogueChangedDto("Category", "Deleted", id, null, "Інструмент", "Tools"), inbox.Single());
+    }
+
+    [Fact]
+    public async Task CatalogueBroadcast_RunsInItsOwnSpan_WithTags()
+    {
+        var spans = new ConcurrentBag<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == Telemetry.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = spans.Add
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var renamed = await Client.PutAsJsonAsync("/api/products/1", new { categoryId = 1, nameUk = "Дуб колотий", nameEn = "Split oak" });
+        Assert.Equal(HttpStatusCode.NoContent, renamed.StatusCode);
+
+        var span = Assert.Single(spans);
+        Assert.Equal("BroadcastCatalogueChange", span.OperationName);
+        Assert.Equal("Product", span.GetTagItem("catalogue.entity"));
+        Assert.Equal("Updated", span.GetTagItem("catalogue.kind"));
+        Assert.Equal("1", span.GetTagItem("category.ids"));
     }
 }

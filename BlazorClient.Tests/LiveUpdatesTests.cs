@@ -9,6 +9,7 @@ namespace BlazorClient.Tests
         private sealed class FakeHubClient : IHubClient
         {
             private Action<PriceChanged>? _handler;
+            private Action<CatalogueChanged>? _catalogueHandler;
 
             public int Starts { get; private set; }
 
@@ -38,7 +39,15 @@ namespace BlazorClient.Tests
                 return new Noop();
             }
 
+            public IDisposable OnCatalogueChanged(Action<CatalogueChanged> handler)
+            {
+                _catalogueHandler = handler;
+                return new Noop();
+            }
+
             public void Receive(PriceChanged message) => _handler?.Invoke(message);
+
+            public void ReceiveCatalogue(CatalogueChanged message) => _catalogueHandler?.Invoke(message);
 
             public Task DropConnectionAsync() => Reconnecting?.Invoke() ?? Task.CompletedTask;
 
@@ -129,6 +138,34 @@ namespace BlazorClient.Tests
             Assert.Equal(2, hub.Starts);
             Assert.Equal(new[] { 1 }, hub.Joined);
             Assert.True(live.IsLive);
+        }
+
+        [Fact]
+        public void CatalogueMessages_AreForwardedToSubscribers()
+        {
+            var hub = new FakeHubClient();
+            var live = new LiveUpdates(hub);
+            CatalogueChanged? received = null;
+            live.CatalogueChanged += message => received = message;
+            var sent = new CatalogueChanged("Product", "Updated", 1, 5, "Дуб", "Oak");
+
+            hub.ReceiveCatalogue(sent);
+
+            Assert.Equal(sent, received);
+        }
+
+        [Fact]
+        public void PriceMessages_StillArrive_WhenOnlyTheOldFieldsAreKnown()
+        {
+            var hub = new FakeHubClient();
+            var live = new LiveUpdates(hub);
+            PriceChanged? received = null;
+            live.PriceChanged += message => received = message;
+
+            hub.Receive(new PriceChanged("Updated", 1, 1, 7, 100m));
+
+            Assert.Equal("", received!.ProductNameUk);
+            Assert.Equal("", received.ProductName);
         }
     }
 }

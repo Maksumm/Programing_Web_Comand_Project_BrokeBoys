@@ -1,5 +1,6 @@
 using ApiApp.Common;
 using ApiApp.Data;
+using ApiApp.Realtime;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +16,7 @@ internal static class CreateProduct
             .RequireAuthorization(Policies.ManageCatalogue)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-    private static async Task<Results<Created<ProductResponse>, ValidationProblem, ProblemHttpResult>> Handle(CreateProductRequest request, AppDbContext db, CancellationToken ct)
+    private static async Task<Results<Created<ProductResponse>, ValidationProblem, ProblemHttpResult>> Handle(CreateProductRequest request, AppDbContext db, ICatalogueNotifier notifier, CancellationToken ct)
     {
         var errors = new ErrorBag()
             .RequiredId(nameof(request.CategoryId), request.CategoryId)
@@ -51,6 +52,7 @@ internal static class CreateProduct
             return Problems.Invalid("CategoryId", "Category does not exist.");
         }
 
+        await notifier.NotifyProductAsync("Created", new ProductRef(entity.Id, entity.CategoryId, entity.NameUk, entity.NameEn), [entity.CategoryId], ct);
         return TypedResults.Created($"/api/products/{entity.Id}", ProductResponse.From(entity));
     }
 }

@@ -14,11 +14,14 @@ namespace BlazorClient.Services
         {
             _hub = hub;
             _hub.OnPriceChanged(message => PriceChanged?.Invoke(message));
+            _hub.OnCatalogueChanged(message => CatalogueChanged?.Invoke(message));
             _hub.Reconnecting += OnReconnecting;
             _hub.Reconnected += RejoinAsync;
         }
 
         public event Action<PriceChanged>? PriceChanged;
+
+        public event Action<CatalogueChanged>? CatalogueChanged;
 
         public event Action? StateChanged;
 

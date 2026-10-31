@@ -158,4 +158,12 @@
 	<data name="NextNotificationDropText" xml:space="preserve"><value>We expect “{0}” at its minimum: the price should drop by about {1}% from today.</value></data>
 	<data name="NextNotificationNoDrop" xml:space="preserve"><value>No price drops are expected soon for your subscriptions.</value></data>
 	<data name="NextNotificationNoSubscriptions" xml:space="preserve"><value>Subscribe to a category to see when to expect a price drop.</value></data>
+	<data name="ToastPriceCreated" xml:space="preserve"><value>“{0}”: a price for {1} was added — {2}</value></data>
+	<data name="ToastPriceUpdated" xml:space="preserve"><value>“{0}”: the price for {1} is now {2}</value></data>
+	<data name="ToastPriceDeleted" xml:space="preserve"><value>“{0}”: the price for {1} was removed</value></data>
+	<data name="ToastProductCreated" xml:space="preserve"><value>New product in a category you follow: “{0}”</value></data>
+	<data name="ToastProductUpdated" xml:space="preserve"><value>Product updated: “{0}”</value></data>
+	<data name="ToastProductDeleted" xml:space="preserve"><value>Product removed: “{0}”</value></data>
+	<data name="ToastCategoryUpdated" xml:space="preserve"><value>Category updated: “{0}”</value></data>
+	<data name="ToastCategoryDeleted" xml:space="preserve"><value>Category removed: “{0}”</value></data>
 </root>

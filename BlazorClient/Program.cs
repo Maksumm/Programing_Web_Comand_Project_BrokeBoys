@@ -56,6 +56,7 @@ builder.Services.AddScoped<ICatalogueApi>(sp => new CatalogueApi(
     sp.GetRequiredService<ApiHttpClient>().Client,
     sp.GetRequiredService<IStringLocalizer<AppResources>>()));
 builder.Services.AddScoped<IAdminApi>(sp => new AdminApi(sp.GetRequiredService<ApiHttpClient>().Client));
+builder.Services.AddScoped<IToastService, MudToastService>();
 builder.Services.AddScoped<CurrentUserState>();
 
 // Оновлення «наживо» через SignalR: з'єднання відкривається, коли сторінка приєднується до групи категорії.

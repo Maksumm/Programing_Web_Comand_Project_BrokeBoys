@@ -15,5 +15,8 @@ namespace BlazorClient.Services
         Task JoinAsync(int categoryId);
 
         IDisposable OnPriceChanged(Action<PriceChanged> handler);
+
+        /// <summary>Повідомлення про зміну товару чи категорії (<c>CatalogueChanged</c>).</summary>
+        IDisposable OnCatalogueChanged(Action<CatalogueChanged> handler);
     }
 }
