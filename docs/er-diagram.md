@@ -77,3 +77,19 @@ dotnet ef database update --project ApiApp
 ```
 
 Схема змінюється лише міграціями (`dotnet ef database update`); застосунок сам таблиць не створює.
+
+
+## Вивід тестів (крок 4)
+
+Інтеграційні тести на PostgreSQL у контейнері (Testcontainers, `postgres:18-alpine`):
+
+```bash
+dotnet test ApiApp.Tests --filter "FullyQualifiedName~PostgresIntegrationTests" --logger "console;verbosity=normal"
+```
+
+Результат: 10 з 10 тестів пройдено, зокрема `Post_Returns201_AndGetByLocationHeader_Returns200`.
+
+![Запуск тестів](test-output-1.png)
+<img width="1261" height="339" alt="Знімок екрана 2026-11-05 201652" src="https://github.com/user-attachments/assets/9e6c66a2-79ad-4ecc-b468-aa01c60b5313" />
+![Результат: 10 з 10 пройдено](test-output-2.png)
+<img width="1235" height="350" alt="Знімок екрана 2026-11-05 202129" src="https://github.com/user-attachments/assets/68aee565-8cef-4509-a98f-e8dbee03b733" />
