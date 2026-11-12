@@ -97,6 +97,12 @@ dotnet test ApiApp.Tests                              # Testcontainers сам з
 
 Читання виконується асинхронно з `AsNoTracking()`; пов'язані записи підписок завантажуються одним запитом через `Include`.
 
+## Вхід через Microsoft Entra ID (робота 5)
+ 
+- Налаштування Entra ID, ролі й знімки екрана: [docs/entra-setup.md](docs/entra-setup.md)
+- Таблиця endpoints (потрібні scope і роль, коди відповідей): [docs/endpoints-security.md](docs/endpoints-security.md)
+- Тести авторизації (401/403/успіх): `ApiApp.Tests/AuthorizationTests.cs`
+ 
 ## Запуск
 
 Спершу запустіть API, потім клієнт (у двох терміналах):
