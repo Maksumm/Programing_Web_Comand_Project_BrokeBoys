@@ -62,6 +62,32 @@ dotnet user-secrets set "AzureAd:ClientId" "<API client ID>" --project ApiApp
 3. Користувач з роллю **Subscriber** бачить сторінку «Підписки»; без ролі бачить повідомлення, що потрібна роль.
 4. Щоб побачити вміст токена: у браузері скопіюйте access-токен із запиту до API (DevTools → Network → заголовок `Authorization`) і вставте на <https://jwt.ms>. Перевірте `aud` (`api://<API client ID>` або GUID), `scp` (`access_as_user`) і `roles`.
 
-## 6. Знімок екрана для здачі
+## 6. Знімки екрана для здачі
+ 
+### Крок 1 — Microsoft Entra ID
+ 
+**Scope `access_as_user`.** У реєстрації API (Expose an API) оголошено scope `api://1c6dbff4-a132-4682-ae03-8dc140fe91ee/access_as_user`, стан Enabled.
+ 
+<img width="1279" height="686" alt="Знімок екрана 2026-11-12 115032" src="https://github.com/user-attachments/assets/9ac80bee-fa17-44f2-bbfb-dd33aa188ff5" />
 
-Після входу: у верхній панелі видно ім'я користувача, відкрита сторінка, доступна лише з потрібною роллю (наприклад, «Підписки» для `Subscriber`).
+ 
+**Ролі застосунку.** У реєстрації API (App roles) оголошено ролі `Admin` і `Subscriber`, обидві Enabled.
+ 
+<img width="1280" height="669" alt="Знімок екрана 2026-11-12 115043" src="https://github.com/user-attachments/assets/3e45ce1e-f876-4b31-bc2a-2881e6bb21ea" />
+
+ 
+**Призначення ролей.** У Enterprise applications (Users and groups) кожна роль призначена учасникам команди: `Admin` — Никифорук Максим; `Subscriber` — Іванець Владислав, Дідух Володимир, Никифорук Максим.
+ 
+<img width="1280" height="657" alt="Знімок екрана 2026-11-12 115201" src="https://github.com/user-attachments/assets/0387488b-3d12-4b92-a248-794fe7d4714b" />
+
+ 
+### Крок 2 — застосунок після входу
+ 
+**Верхня панель.** Після входу через Microsoft Entra ID верхня панель показує ім'я користувача («Никифорук Максим») і кнопку «Вийти».
+ 
+<img width="1280" height="691" alt="Знімок екрана 2026-11-12 115256" src="https://github.com/user-attachments/assets/6d66e821-9db7-44ee-9ffd-484f81c14543" />
+
+**Сторінка, доступна лише з потрібною роллю.** Сторінка «Мої підписки» (`/subscriptions`) відкривається лише користувачеві з роллю `Subscriber`; ім'я користувача видно у верхній панелі.
+ 
+<img width="1280" height="650" alt="Знімок екрана 2026-11-12 115742" src="https://github.com/user-attachments/assets/b32319d5-9d27-40e5-870a-1e3fc4c674ea" />
+
