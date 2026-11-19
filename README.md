@@ -125,7 +125,7 @@ dotnet test
 - Client: https://github.com/Maksumm/Programing_Web_Comand_Project_BrokeBoys/actions/runs/43203129303
 
 ### Trace зміни ціни в Application Insights (span BroadcastPriceChange)
-(<img width="1280" height="615" alt="Знімок екрана 2026-11-19 220413" src="https://github.com/user-attachments/assets/cc97d8b1-a964-4a43-8a5a-5701fd64170f" />
+<img width="1280" height="615" alt="Знімок екрана 2026-11-19 220413" src="https://github.com/user-attachments/assets/cc97d8b1-a964-4a43-8a5a-5701fd64170f" />
 
 ### App settings в App Service
 <img width="1280" height="620" alt="Знімок екрана 2026-11-19 214958" src="https://github.com/user-attachments/assets/bbe9097e-91ab-42ad-bc98-e481d060f171" />
