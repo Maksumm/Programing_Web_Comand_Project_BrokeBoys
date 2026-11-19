@@ -116,8 +116,25 @@ dotnet test
 Якщо браузер скаржиться на сертифікат: `dotnet dev-certs https --trust`.
 Якщо екрани показують помилку замість даних — див. `docs/troubleshooting.md` (на екрані видно причину та код HTTP).
 
-## Релізи, телеметрія й наскрізний тест (робота 6)
+## Робота 6: результат
 
-- `.github/workflows/api.yml` і `client.yml` — після кожного merge у `main` тести та розгортання (API → App Service, клієнт → Static Web Apps; міграції через efbundle; вхід в Azure через OpenID Connect). Налаштування Azure і GitHub — `docs/deploy-setup.md`.
-- Application Insights вмикається змінною середовища `APPLICATIONINSIGHTS_CONNECTION_STRING` (`UseAzureMonitor()`).
-- `E2ETests` — Playwright: справжній API на Kestrel над PostgreSQL (Testcontainers) і справжній клієнт у Chromium; перед розгортанням API його запускає `api.yml`.
+**Застосунок:** https://zealous-wave-08945d810.6.azurestaticapps.net
+
+**Успішні запуски workflow (merge у `main`, e2e-тест пройдено):**
+- API: https://github.com/Maksumm/Programing_Web_Comand_Project_BrokeBoys/actions/runs/43203129359/job/131131399267
+- Client: https://github.com/Maksumm/Programing_Web_Comand_Project_BrokeBoys/actions/runs/43203129303
+
+### Trace зміни ціни в Application Insights (span BroadcastPriceChange)
+(<img width="1280" height="615" alt="Знімок екрана 2026-11-19 220413" src="https://github.com/user-attachments/assets/cc97d8b1-a964-4a43-8a5a-5701fd64170f" />
+
+### App settings в App Service
+<img width="1280" height="620" alt="Знімок екрана 2026-11-19 214958" src="https://github.com/user-attachments/assets/bbe9097e-91ab-42ad-bc98-e481d060f171" />
+
+
+### Secrets і variables environment production
+<img width="1280" height="614" alt="Знімок екрана 2026-11-19 221113" src="https://github.com/user-attachments/assets/34ffe538-0919-4e7f-ab8a-c81bb0310a8c" />
+
+
+### Крок End-to-end test в api.yml
+<img width="1280" height="616" alt="Знімок екрана 2026-11-19 220640" src="https://github.com/user-attachments/assets/5f356534-15ea-443d-a06f-93d3b85551f7" />
+
